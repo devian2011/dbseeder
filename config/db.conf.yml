@@ -1,0 +1,6 @@
+databases:
+  main:
+    name: main
+    dsn: "postgres://admin:admin@db/postgres?sslmode=disable"
+    tablesPath: "$PWD/main"
+    tables:

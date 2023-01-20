@@ -1,0 +1,54 @@
+tables:
+  - name: users
+    count: 100
+    fields:
+      - name: id
+        type: int
+        generation: db
+      - name: username
+        type: string
+        generation: faker
+      - name: password
+        type: string
+        generation: faker
+        plugins:
+          - bcrypt
+    fill:
+      - id: 1
+        username: admin
+        password: admin
+  - name: roles
+    count: 2
+    fields:
+      - name: id
+        type: int
+        generation: db
+      - name: name
+        type: string
+        generation: list
+        list:
+          - ROLE_ADMIN
+          - ROLE_USER
+    fill:
+      - id: 1
+        name: ROLE_ADMIN
+      - id: 2
+        name: ROLE_USER
+  - name: user_in_roles
+    count: 1000
+    expression: "foreach=users random=oneOf"
+    fields:
+      - name: user_id
+        type: int
+        depends:
+          foreign:
+            - db: main
+              table: users
+              field: id
+      - name: role_id
+        type: int
+        depends:
+          foreign:
+            - db: main
+              table: roles
+              field: id
