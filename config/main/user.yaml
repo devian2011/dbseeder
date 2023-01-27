@@ -1,4 +1,33 @@
 tables:
+  - name: areas
+    count: 10
+    fields:
+      - name: id
+        type: int
+        generation: db
+      - name: name
+        type: "string 10"
+        generation: faker
+  - name: info
+    count: 100
+    fields:
+      - name: id
+        type: int
+        generation: db
+      - name: phone
+        type: phone
+        generation: faker
+      - name: address
+        type: address
+        generation: faker
+      - name: user_id
+        type: int
+        generation: depends
+        depends:
+          foreign:
+            - db: main
+              table: users
+              field: id
   - name: users
     count: 100
     fields:
@@ -13,6 +42,14 @@ tables:
         generation: faker
         plugins:
           - bcrypt
+      - name: area_id
+        type: int
+        generation: depends
+        depends:
+          foreign:
+            - db: main
+              table: areas
+              field: id
     fill:
       - id: 1
         username: admin
@@ -40,6 +77,7 @@ tables:
     fields:
       - name: user_id
         type: int
+        generation: depends
         depends:
           foreign:
             - db: main
@@ -47,6 +85,7 @@ tables:
               field: id
       - name: role_id
         type: int
+        generation: depends
         depends:
           foreign:
             - db: main

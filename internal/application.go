@@ -2,8 +2,10 @@ package internal
 
 import (
 	"context"
+	"dbseeder/internal/exporter"
 	"dbseeder/internal/modifiers"
 	"dbseeder/internal/schema"
+	"dbseeder/internal/seeder"
 	"errors"
 	"fmt"
 	"os"
@@ -33,14 +35,14 @@ func NewApplication(dbConfFilePath string, ctx context.Context) (*Application, e
 
 	app := &Application{
 		ctx:        ctx,
-		schema:     schema.NewSchema(notation.Databases),
+		schema:     schema.NewSchema(notation),
 		commandMap: make(map[string]func() error, 0),
 		modifiers:  modifiers.NewModifierStore(),
 	}
 	app.commandMap[seedCommand] = app.seed
 	app.commandMap[modifiersList] = app.modifierList
 	app.commandMap[exportSchema] = app.exportSchema
-	app.commandMap[schemaDependencies] = app.schemaDependencies
+	app.commandMap[schemaDependencies] = app.exportDependencies
 	app.commandMap[fieldTypeDefinitions] = app.fieldTypesDefinitions
 	app.commandMap[helpCommand] = app.help
 
@@ -63,20 +65,18 @@ func (a *Application) modifierList() error {
 	return nil
 }
 
-func (a *Application) exportSchema() error {
-	return a.schema.Export(os.Stdout)
-}
-
-func (a *Application) schemaDependencies() error {
-	for what, by := range a.schema.GetDependencies() {
-		fmt.Printf("\033[1;32m%s\033[0m - \033[1;33m%s\033[0m\n", what, by)
-	}
-
+func (a *Application) exportDependencies() error {
+	exp := exporter.NewTableDependenceTreeExporter(os.Stdout, a.schema.Tree)
+	exp.Export()
 	return nil
 }
 
+func (a *Application) exportSchema() error {
+	return exporter.ExportNotation(os.Stdout, a.schema)
+}
+
 func (a *Application) fieldTypesDefinitions() error {
-	for field, desc := range schema.FieldTypesMap {
+	for field, desc := range seeder.FieldTypesMap {
 		fmt.Printf("\033[1;32m%s\033[0m - \033[1;33m%s\033[0m\n", field, desc)
 	}
 

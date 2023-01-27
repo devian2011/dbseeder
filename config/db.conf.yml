@@ -1,6 +1,7 @@
 databases:
   main:
     name: main
+    driver: "pgx"
     dsn: "postgres://admin:admin@db/postgres?sslmode=disable"
     tablesPath: "$PWD/main"
     tables:
