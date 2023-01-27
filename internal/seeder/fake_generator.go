@@ -122,7 +122,7 @@ func Generate(t string) (any, error) {
 	case fieldFullName:
 		return faker.Name().Name(), nil
 	case fieldFirstName:
-		return faker.Name().LastName(), nil
+		return faker.Name().FirstName(), nil
 	case fieldLastName:
 		return faker.Name().LastName(), nil
 	case fieldUrl:

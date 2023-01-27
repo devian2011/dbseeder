@@ -20,6 +20,7 @@ const (
 	generationTypeFaker Generation = "faker"   // Generate fake data
 	generationTypeList  Generation = "list"    // Get data from defined list (property List of Field struct)
 	generationDepends   Generation = "depends" // Mark field that it depends on another field (on same ot other table)
+	generationFill      Generation = "fill"    // Mark field that it depends on fill table section
 )
 
 type Databases struct {
