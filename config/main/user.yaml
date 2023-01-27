@@ -1,13 +1,4 @@
 tables:
-  - name: areas
-    count: 10
-    fields:
-      - name: id
-        type: int
-        generation: db
-      - name: name
-        type: "string 10"
-        generation: faker
   - name: info
     count: 100
     fields:
@@ -42,6 +33,9 @@ tables:
         generation: faker
         plugins:
           - bcrypt
+      - name: last_online
+        type: "date 2022-01-01"
+        generation: faker
       - name: area_id
         type: int
         generation: depends

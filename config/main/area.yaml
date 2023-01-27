@@ -1,0 +1,14 @@
+tables:
+  - name: areas
+    count: 3
+    fields:
+      - name: id
+        type: int
+        generation: db
+      - name: name
+        type: string
+        generation: fill
+    fill:
+      - name: "us-east-1"
+      - name: "us-west-1"
+      - name: "europe-2"
