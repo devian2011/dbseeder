@@ -36,15 +36,18 @@ func NewApplication(dbConfFilePath string, ctx context.Context) (*Application, e
 	app := &Application{
 		ctx:        ctx,
 		schema:     schema.NewSchema(notation),
-		commandMap: make(map[string]func() error, 0),
+		commandMap: nil,
 		modifiers:  modifiers.NewModifierStore(),
 	}
-	app.commandMap[seedCommand] = app.seed
-	app.commandMap[modifiersList] = app.modifierList
-	app.commandMap[exportSchema] = app.exportSchema
-	app.commandMap[schemaDependencies] = app.exportDependencies
-	app.commandMap[fieldTypeDefinitions] = app.fieldTypesDefinitions
-	app.commandMap[helpCommand] = app.help
+
+	app.commandMap = map[string]func() error{
+		seedCommand:          app.seed,
+		modifiersList:        app.modifierList,
+		exportSchema:         app.exportSchema,
+		schemaDependencies:   app.exportDependencies,
+		fieldTypeDefinitions: app.fieldTypesDefinitions,
+		helpCommand:          app.help,
+	}
 
 	return app, nil
 }
@@ -89,6 +92,7 @@ func (a *Application) help() error {
 	fmt.Printf("\033[1;32m%s\033[0m - \033[1;33m%s\033[0m\n", schemaDependencies, "Show all dependecies btw tables and databases in schema")
 	fmt.Printf("\033[1;32m%s\033[0m - \033[1;33m%s\033[0m\n", modifiersList, "Show all allowed modifiers")
 	fmt.Printf("\033[1;32m%s\033[0m - \033[1;33m%s\033[0m\n", exportSchema, "Show all schema files in one")
+	fmt.Printf("\033[1;32m%s\033[0m - \033[1;33m%s\033[0m\n", helpCommand, "Show all commands")
 
 	return nil
 }

@@ -23,6 +23,7 @@ func (tree *TableDependenceTree) GetNode(dbName string, tableName string) *Table
 			Table:        nil,
 			DbName:       dbName,
 			Code:         code,
+			Dependents:   0,
 		}
 	}
 
@@ -34,6 +35,7 @@ type TableDependenceNode struct {
 	Table        *Table
 	DbName       string
 	Code         string
+	Dependents   int
 }
 
 func (node *TableDependenceNode) AddTableNotation(table *Table) {
@@ -48,6 +50,14 @@ func (node *TableDependenceNode) HasDependencies() bool {
 	return len(node.Dependencies) > 0
 }
 
+func (node *TableDependenceNode) AddDependent() {
+	node.Dependents++
+}
+
+func (node *TableDependenceNode) HasDependents() bool {
+	return node.Dependents != 0
+}
+
 func BuildDependenciesTree(dbs *Databases) *TableDependenceTree {
 	tree := NewTree()
 	for _, database := range dbs.Databases {
@@ -57,6 +67,7 @@ func BuildDependenciesTree(dbs *Databases) *TableDependenceTree {
 			for _, field := range table.Fields {
 				for _, relation := range field.Depends.Foreign {
 					relationNode := tree.GetNode(relation.Db, relation.Table)
+					relationNode.AddDependent()
 					node.DependsOn(relationNode)
 				}
 			}
