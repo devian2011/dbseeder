@@ -6,6 +6,7 @@ import (
 	"dbseeder/internal/modifiers"
 	"dbseeder/internal/schema"
 	"dbseeder/internal/seeder"
+	"dbseeder/pkg/color"
 	"errors"
 	"fmt"
 	"os"
@@ -62,7 +63,7 @@ func (a *Application) Run(command string) error {
 
 func (a *Application) modifierList() error {
 	for mName, mDesc := range a.modifiers.List() {
-		fmt.Printf("\033[1;32m%s\033[0m - \033[1;33m%s\033[0m\n", mName, mDesc)
+		fmt.Printf("%s - %s\n", color.ColoredString(color.Green, mName), color.ColoredString(color.Yellow, mDesc))
 	}
 
 	return nil
@@ -80,19 +81,19 @@ func (a *Application) exportSchema() error {
 
 func (a *Application) fieldTypesDefinitions() error {
 	for field, desc := range seeder.FieldTypesMap {
-		fmt.Printf("\033[1;32m%s\033[0m - \033[1;33m%s\033[0m\n", field, desc)
+		fmt.Printf("%s - %s\n", color.ColoredString(color.Green, string(field)), color.ColoredString(color.Yellow, desc))
 	}
 
 	return nil
 }
 
 func (a *Application) help() error {
-	fmt.Printf("\033[1;32m%s\033[0m - \033[1;33m%s\033[0m\n", seedCommand, "Fill database generated data")
-	fmt.Printf("\033[1;32m%s\033[0m - \033[1;33m%s\033[0m\n", fieldTypeDefinitions, "Show all allowed fields")
-	fmt.Printf("\033[1;32m%s\033[0m - \033[1;33m%s\033[0m\n", schemaDependencies, "Show all dependecies btw tables and databases in schema")
-	fmt.Printf("\033[1;32m%s\033[0m - \033[1;33m%s\033[0m\n", modifiersList, "Show all allowed modifiers")
-	fmt.Printf("\033[1;32m%s\033[0m - \033[1;33m%s\033[0m\n", exportSchema, "Show all schema files in one")
-	fmt.Printf("\033[1;32m%s\033[0m - \033[1;33m%s\033[0m\n", helpCommand, "Show all commands")
+	fmt.Printf("%s - %s\n", color.ColoredString(color.Green, seedCommand), color.ColoredString(color.Yellow, "Fill database generated data"))
+	fmt.Printf("%s - %s\n", color.ColoredString(color.Green, fieldTypeDefinitions), color.ColoredString(color.Yellow, "Show all allowed fields"))
+	fmt.Printf("%s - %s\n", color.ColoredString(color.Green, schemaDependencies), color.ColoredString(color.Yellow, "Show all dependecies btw tables and databases in schema"))
+	fmt.Printf("%s - %s\n", color.ColoredString(color.Green, modifiersList), color.ColoredString(color.Yellow, "Show all allowed modifiers"))
+	fmt.Printf("%s - %s\n", color.ColoredString(color.Green, exportSchema), color.ColoredString(color.Yellow, "Show all schema files in one"))
+	fmt.Printf("%s - %s\n", color.ColoredString(color.Green, helpCommand), color.ColoredString(color.Yellow, "Show all commands"))
 
 	return nil
 }
