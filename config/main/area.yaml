@@ -1,13 +1,14 @@
 tables:
   - name: areas
     count: 3
+    action: generate
     fields:
-      - name: id
+      id:
         type: int
         generation: db
-      - name: name
+      name:
         type: string
-        generation: fill
+        generation: faker
     fill:
       - name: "us-east-1"
       - name: "us-west-1"

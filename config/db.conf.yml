@@ -2,6 +2,10 @@ databases:
   main:
     name: main
     driver: "pgx"
-    dsn: "postgres://admin:admin@db/postgres?sslmode=disable"
+    dsn: "host=localhost port=15434 user=admin password=admin dbname=admin sslmode=disable"
     tablesPath: "$PWD/main"
-    tables:
+#  main:
+#    name: main
+#    driver: "mysql"
+#    dsn: "admin:admin@localhost:13306/admin"
+#    tablesPath: "$PWD/main"

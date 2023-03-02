@@ -1,0 +1,29 @@
+version: '3.7'
+services:
+  postgres:
+    image: postgres:14.7-alpine
+    environment:
+      POSTGRES_DB: admin
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "15434:5432"
+    volumes:
+      - pData:/var/lib/postgres
+      - ./db/psql:/docker-entrypoint-initdb.d
+  mysql:
+    image: mysql:8.0.32-debian
+    environment:
+      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_DATABASE: admin
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: admin
+    ports:
+      - "13306:3306"
+    volumes:
+      - mData:/var/lib/mysql
+      - ./db/mysql:/docker-entrypoint-initdb.d
+
+volumes:
+  pData:
+  mData:

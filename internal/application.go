@@ -71,8 +71,7 @@ func (a *Application) modifierList() error {
 
 func (a *Application) exportDependencies() error {
 	exp := exporter.NewTableDependenceTreeExporter(os.Stdout, a.schema.Tree)
-	exp.Export()
-	return nil
+	return exp.Export()
 }
 
 func (a *Application) exportSchema() error {
@@ -99,6 +98,10 @@ func (a *Application) help() error {
 }
 
 func (a *Application) seed() error {
-	fmt.Printf("%+v\n", a.schema)
-	return nil
+	sdr, seederErr := seeder.NewSeeder(a.schema, a.modifiers)
+	if seederErr != nil {
+		return seederErr
+	}
+
+	return sdr.Run()
 }

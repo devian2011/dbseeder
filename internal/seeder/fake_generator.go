@@ -1,7 +1,6 @@
 package seeder
 
 import (
-	"dbseeder/internal/schema"
 	"errors"
 	"strconv"
 	"strings"
@@ -9,34 +8,36 @@ import (
 	"time"
 )
 
+type FieldType string
+
 const (
-	fieldString         schema.FieldType = "string"
-	fieldInt            schema.FieldType = "int"
-	fieldEmail          schema.FieldType = "email"
-	fieldMac            schema.FieldType = "mac"
-	fieldIpv4           schema.FieldType = "ipv4"
-	fieldIpv6           schema.FieldType = "ipv6"
-	fieldDate           schema.FieldType = "date"
-	fieldText           schema.FieldType = "text"
-	fieldAddress        schema.FieldType = "address"
-	fieldAddressZipCode schema.FieldType = "address->zip"
-	fieldAddressCity    schema.FieldType = "address->city"
-	fieldAddressStreet  schema.FieldType = "address->street"
-	fieldCountry        schema.FieldType = "country"
-	fieldCountryCode    schema.FieldType = "country->code"
-	fieldMoney          schema.FieldType = "money"
-	fieldUrl            schema.FieldType = "url"
-	fieldDomainName     schema.FieldType = "domain"
-	fieldFullName       schema.FieldType = "name"
-	fieldFirstName      schema.FieldType = "firstName"
-	fieldLastName       schema.FieldType = "fieldLastName"
-	fieldHex            schema.FieldType = "hex"
-	fieldDecimal        schema.FieldType = "decimal"
-	fieldPhoneNumber    schema.FieldType = "phone"
-	fieldPhoneCode      schema.FieldType = "phone->code"
+	fieldString         FieldType = "string"
+	fieldInt            FieldType = "int"
+	fieldEmail          FieldType = "email"
+	fieldMac            FieldType = "mac"
+	fieldIpv4           FieldType = "ipv4"
+	fieldIpv6           FieldType = "ipv6"
+	fieldDate           FieldType = "date"
+	fieldText           FieldType = "text"
+	fieldAddress        FieldType = "address"
+	fieldAddressZipCode FieldType = "address->zip"
+	fieldAddressCity    FieldType = "address->city"
+	fieldAddressStreet  FieldType = "address->street"
+	fieldCountry        FieldType = "country"
+	fieldCountryCode    FieldType = "country->code"
+	fieldMoney          FieldType = "money"
+	fieldUrl            FieldType = "url"
+	fieldDomainName     FieldType = "domain"
+	fieldFullName       FieldType = "name"
+	fieldFirstName      FieldType = "firstName"
+	fieldLastName       FieldType = "fieldLastName"
+	fieldHex            FieldType = "hex"
+	fieldDecimal        FieldType = "decimal"
+	fieldPhoneNumber    FieldType = "phone"
+	fieldPhoneCode      FieldType = "phone->code"
 )
 
-var FieldTypesMap = map[schema.FieldType]string{
+var FieldTypesMap = map[FieldType]string{
 	fieldString:         "String field can add length like - 'string 15'",
 	fieldInt:            "Int32 field. Min Max - 'int 0 10'",
 	fieldEmail:          "Email field",
@@ -73,11 +74,11 @@ func Generate(t string) (any, error) {
 		return nil, errors.New("wrong type format")
 	}
 
-	fieldType := schema.FieldType(parts[0])
+	fieldType := FieldType(parts[0])
 	switch fieldType {
 	case fieldString:
 		size := 10
-		if len(parts) <= 1 {
+		if len(parts) >= 2 {
 			size, _ = strconv.Atoi(parts[1])
 		}
 		return faker.Lorem().Characters(size), nil
@@ -109,7 +110,7 @@ func Generate(t string) (any, error) {
 		return faker.Number().Decimal(begin, end), nil
 	case fieldHex:
 		size := 10
-		if len(parts) <= 1 {
+		if len(parts) >= 2 {
 			size, _ = strconv.Atoi(parts[1])
 		}
 		return faker.Number().Hexadecimal(size), nil

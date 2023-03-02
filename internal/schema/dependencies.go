@@ -61,9 +61,9 @@ func (node *TableDependenceNode) HasDependents() bool {
 func BuildDependenciesTree(dbs *Databases) *TableDependenceTree {
 	tree := NewTree()
 	for _, database := range dbs.Databases {
-		for _, table := range database.Tables {
+		for k, table := range database.Tables {
 			node := tree.GetNode(database.Name, table.Name)
-			node.AddTableNotation(&table)
+			node.AddTableNotation(&database.Tables[k])
 			for _, field := range table.Fields {
 				for _, relation := range field.Depends.Foreign {
 					relationNode := tree.GetNode(relation.Db, relation.Table)
@@ -77,10 +77,15 @@ func BuildDependenciesTree(dbs *Databases) *TableDependenceTree {
 	return tree
 }
 
-type TreeWalkFunc func(code string, node *TableDependenceNode)
+type TreeWalkFunc func(code string, node *TableDependenceNode) error
 
-func (tree *TableDependenceTree) Walk(fn TreeWalkFunc) {
+func (tree *TableDependenceTree) Walk(fn TreeWalkFunc) error {
 	for code, node := range tree.tableMap {
-		fn(code, node)
+		err := fn(code, node)
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
 }

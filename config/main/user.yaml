@@ -1,17 +1,18 @@
 tables:
   - name: info
-    count: 100
+    count: 10
+    action: generate
     fields:
-      - name: id
+      id:
         type: int
         generation: db
-      - name: phone
+      phone:
         type: phone
         generation: faker
-      - name: address
+      address:
         type: address
         generation: faker
-      - name: user_id
+      user_id:
         type: int
         generation: depends
         depends:
@@ -20,23 +21,24 @@ tables:
               table: users
               field: id
   - name: users
-    count: 100
+    count: 10
+    action: generate
     fields:
-      - name: id
+      id:
         type: int
         generation: db
-      - name: username
+      username:
         type: string
         generation: faker
-      - name: password
+      password:
         type: string
         generation: faker
         plugins:
           - bcrypt
-      - name: last_online
+      last_online:
         type: "date 2022-01-01"
         generation: faker
-      - name: area_id
+      area_id:
         type: int
         generation: depends
         depends:
@@ -45,31 +47,29 @@ tables:
               table: areas
               field: id
     fill:
-      - id: 1
-        username: admin
+      - username: admin
         password: admin
   - name: roles
     count: 2
+    action: generate
     fields:
-      - name: id
+      id:
         type: int
         generation: db
-      - name: name
+      name:
         type: string
         generation: list
         list:
           - ROLE_ADMIN
           - ROLE_USER
     fill:
-      - id: 1
-        name: ROLE_ADMIN
-      - id: 2
-        name: ROLE_USER
+      - name: ROLE_ADMIN
+      - name: ROLE_USER
   - name: user_in_roles
-    count: 1000
-    expression: "foreach=users random=oneOf"
+    count: 10
+    action: generate
     fields:
-      - name: user_id
+      user_id:
         type: int
         generation: depends
         depends:
@@ -77,7 +77,7 @@ tables:
             - db: main
               table: users
               field: id
-      - name: role_id
+      role_id:
         type: int
         generation: depends
         depends:
