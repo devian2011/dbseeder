@@ -1,22 +1,13 @@
 package parser
 
 import (
+	"dbseeder/internal/schema"
 	"errors"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 )
-
-type Config struct {
-	Databases map[string]Database `yaml:"databases" json:"databases"`
-}
-
-type Database struct {
-	Driver string `json:"driver" yaml:"driver"`
-	Name   string `json:"name" yaml:"name"` // Database name
-	DSN    string `json:"dsn" yaml:"dsn"`   // Database DSN
-}
 
 type connectionPool struct {
 	connections map[string]*sqlx.DB
@@ -46,21 +37,57 @@ func (pool *connectionPool) initConnection(code, driver, dsn string) error {
 }
 
 type Parser struct {
-	cfg      *Config
+	cfg      *schema.Schema
 	connPool *connectionPool
 }
 
-func NewParser(cfg *Config) (*Parser, error) {
+func NewParser(cfg *schema.Schema) (*Parser, error) {
 	parser := &Parser{
 		cfg:      cfg,
 		connPool: newConnectionPool(),
 	}
-	for dbName, dbCfg := range cfg.Databases {
-		initErr := parser.connPool.initConnection(dbName, dbCfg.Name, dbCfg.DSN)
+	for dbName, dbCfg := range cfg.Databases.Databases {
+		initErr := parser.connPool.initConnection(dbName, dbCfg.Driver, dbCfg.DSN)
 		if initErr != nil {
 			return nil, initErr
 		}
 	}
 
 	return parser, nil
+}
+
+func (parser *Parser) Parse() (*schema.Databases, error) {
+	databases := make(map[string]*schema.Database, 0)
+	for code, conn := range parser.connPool.connections {
+		switch parser.cfg.Databases.Databases[code].Driver {
+		case "pgx":
+			tables, err := PsqlParse(conn, code)
+			if err != nil {
+				return nil, err
+			}
+			databases[code] = &schema.Database{
+				Driver:     "pgx",
+				Name:       code,
+				DSN:        parser.cfg.Databases.Databases[code].DSN,
+				TablesPath: "",
+				Tables:     tables,
+			}
+		case "mysql":
+			tables, err := MysqlParse(conn, code)
+			if err != nil {
+				return nil, err
+			}
+			databases[code] = &schema.Database{
+				Driver:     "mysql",
+				Name:       code,
+				DSN:        parser.cfg.Databases.Databases[code].DSN,
+				TablesPath: "",
+				Tables:     tables,
+			}
+		default:
+			return nil, errors.New("unknown database driver for pare")
+		}
+	}
+
+	return &schema.Databases{Databases: databases}, nil
 }

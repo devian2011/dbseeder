@@ -4,18 +4,21 @@ import (
 	"context"
 	"dbseeder/internal/exporter"
 	"dbseeder/internal/modifiers"
+	parser2 "dbseeder/internal/parser"
 	"dbseeder/internal/schema"
 	"dbseeder/internal/seeder"
 	"dbseeder/internal/seeder/generators/fake"
 	"dbseeder/pkg/color"
 	"errors"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"os"
 )
 
 const (
 	helpCommand          = "help"
 	seedCommand          = "seed"
+	parseCommand         = "parse"
 	modifiersList        = "modifiers"
 	exportSchema         = "export-schema"
 	schemaDependencies   = "schema-dependencies"
@@ -48,6 +51,7 @@ func NewApplication(dbConfFilePath string, ctx context.Context) (*Application, e
 
 	app.commandMap = map[string]func() error{
 		seedCommand:          app.seed,
+		parseCommand:         app.parse,
 		modifiersList:        app.modifierList,
 		exportSchema:         app.exportSchema,
 		schemaDependencies:   app.exportDependencies,
@@ -106,4 +110,17 @@ func (a *Application) seed() error {
 	sdr := seeder.NewSeeder(a.schema, a.modifiers)
 
 	return sdr.Run()
+}
+
+func (a *Application) parse() error {
+	parser, err := parser2.NewParser(a.schema)
+	if err != nil {
+		return err
+	}
+
+	result, err := parser.Parse()
+	if err != nil {
+		return err
+	}
+	return yaml.NewEncoder(os.Stdout).Encode(result)
 }
