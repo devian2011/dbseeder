@@ -6,6 +6,7 @@ import (
 	"dbseeder/internal/modifiers"
 	"dbseeder/internal/schema"
 	"dbseeder/internal/seeder"
+	"dbseeder/internal/seeder/generators/fake"
 	"dbseeder/pkg/color"
 	"errors"
 	"fmt"
@@ -39,6 +40,10 @@ func NewApplication(dbConfFilePath string, ctx context.Context) (*Application, e
 		schema:     schema.NewSchema(notation),
 		commandMap: nil,
 		modifiers:  modifiers.NewModifierStore(),
+	}
+
+	if schemaCheckErr := app.schema.Check(); schemaCheckErr != nil {
+		return nil, schemaCheckErr
 	}
 
 	app.commandMap = map[string]func() error{
@@ -79,7 +84,7 @@ func (a *Application) exportSchema() error {
 }
 
 func (a *Application) fieldTypesDefinitions() error {
-	for field, desc := range seeder.FieldTypesMap {
+	for field, desc := range fake.FieldTypesMap {
 		fmt.Printf("%s - %s\n", color.ColoredString(color.Green, string(field)), color.ColoredString(color.Yellow, desc))
 	}
 
@@ -98,10 +103,7 @@ func (a *Application) help() error {
 }
 
 func (a *Application) seed() error {
-	sdr, seederErr := seeder.NewSeeder(a.schema, a.modifiers)
-	if seederErr != nil {
-		return seederErr
-	}
+	sdr := seeder.NewSeeder(a.schema, a.modifiers)
 
 	return sdr.Run()
 }

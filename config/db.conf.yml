@@ -4,8 +4,8 @@ databases:
     driver: "pgx"
     dsn: "host=localhost port=15434 user=admin password=admin dbname=admin sslmode=disable"
     tablesPath: "$PWD/main"
-#  main:
-#    name: main
+#  second:
+#    name: second
 #    driver: "mysql"
-#    dsn: "admin:admin@localhost:13306/admin"
+#    dsn: "admin:admin@(localhost:13306)/admin"
 #    tablesPath: "$PWD/main"

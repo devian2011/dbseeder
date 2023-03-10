@@ -1,7 +1,9 @@
-package seeder
+package fake
 
 import (
+	"dbseeder/internal/schema"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"syreclabs.com/go/faker"
@@ -30,7 +32,7 @@ const (
 	fieldDomainName     FieldType = "domain"
 	fieldFullName       FieldType = "name"
 	fieldFirstName      FieldType = "firstName"
-	fieldLastName       FieldType = "fieldLastName"
+	fieldLastName       FieldType = "lastName"
 	fieldHex            FieldType = "hex"
 	fieldDecimal        FieldType = "decimal"
 	fieldPhoneNumber    FieldType = "phone"
@@ -68,10 +70,10 @@ type Modifier interface {
 	Apply(modifierName string, val any) (any, error)
 }
 
-func Generate(t string) (any, error) {
-	parts := strings.Split(t, " ")
+func Generate(fieldName string, fieldVal schema.Field) (any, error) {
+	parts := strings.Split(fieldVal.Type, " ")
 	if len(parts) <= 0 {
-		return nil, errors.New("wrong type format")
+		return nil, errors.New(fmt.Sprintf("wrong type format for %s", fieldName))
 	}
 
 	fieldType := FieldType(parts[0])
@@ -158,6 +160,6 @@ func Generate(t string) (any, error) {
 	case fieldAddressZipCode:
 		return faker.Address().ZipCode(), nil
 	default:
-		return nil, errors.New("unknown field type")
+		return nil, errors.New(fmt.Sprintf("unknown field type for %s", fieldName))
 	}
 }

@@ -1,4 +1,4 @@
-package seeder
+package fake
 
 import (
 	"testing"

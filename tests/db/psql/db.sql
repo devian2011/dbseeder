@@ -6,6 +6,9 @@ CREATE TABLE IF NOT EXISTS areas (
 CREATE TABLE IF NOT EXISTS users (
     id bigserial not null primary key,
     username varchar(255) not null,
+    firstname varchar(255) not null,
+    lastname varchar(255) not null,
+    fullname varchar(255) not null,
     password varchar(255) not null,
     last_online timestamp default NOW(),
     area_id bigint not null

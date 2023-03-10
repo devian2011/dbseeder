@@ -17,9 +17,10 @@ tables:
         generation: depends
         depends:
           foreign:
-            - db: main
-              table: users
-              field: id
+            db: main
+            table: users
+            field: id
+            type: oneToOne
   - name: users
     count: 10
     action: generate
@@ -30,6 +31,21 @@ tables:
       username:
         type: string
         generation: faker
+      lastname:
+        type: lastName
+        generation: faker
+      firstname:
+        type: firstName
+        generation: faker
+      fullname:
+        type: string
+        generation: depends
+        depends:
+          expression:
+            expression: "row.lastname + ' ' + row.firstname"
+            rows:
+              - lastname
+              - firstname
       password:
         type: string
         generation: faker
@@ -43,9 +59,10 @@ tables:
         generation: depends
         depends:
           foreign:
-            - db: main
-              table: areas
-              field: id
+            db: main
+            table: areas
+            field: id
+            type: manyToOne
     fill:
       - username: admin
         password: admin
@@ -68,20 +85,23 @@ tables:
   - name: user_in_roles
     count: 10
     action: generate
+    noDuplicates: true
     fields:
       user_id:
         type: int
         generation: depends
         depends:
           foreign:
-            - db: main
-              table: users
-              field: id
+            db: main
+            table: users
+            field: id
+            type: manyToOne
       role_id:
         type: int
         generation: depends
         depends:
           foreign:
-            - db: main
-              table: roles
-              field: id
+            db: main
+            table: roles
+            field: id
+            type: manyToOne

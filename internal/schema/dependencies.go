@@ -38,11 +38,11 @@ type TableDependenceNode struct {
 	Dependents   int
 }
 
-func (node *TableDependenceNode) AddTableNotation(table *Table) {
+func (node *TableDependenceNode) addTableNotation(table *Table) {
 	node.Table = table
 }
 
-func (node *TableDependenceNode) DependsOn(dependent *TableDependenceNode) {
+func (node *TableDependenceNode) dependsOn(dependent *TableDependenceNode) {
 	node.Dependencies = append(node.Dependencies, dependent)
 }
 
@@ -50,7 +50,7 @@ func (node *TableDependenceNode) HasDependencies() bool {
 	return len(node.Dependencies) > 0
 }
 
-func (node *TableDependenceNode) AddDependent() {
+func (node *TableDependenceNode) addDependent() {
 	node.Dependents++
 }
 
@@ -63,12 +63,13 @@ func BuildDependenciesTree(dbs *Databases) *TableDependenceTree {
 	for _, database := range dbs.Databases {
 		for k, table := range database.Tables {
 			node := tree.GetNode(database.Name, table.Name)
-			node.AddTableNotation(&database.Tables[k])
+			node.addTableNotation(&database.Tables[k])
 			for _, field := range table.Fields {
-				for _, relation := range field.Depends.Foreign {
-					relationNode := tree.GetNode(relation.Db, relation.Table)
-					relationNode.AddDependent()
-					node.DependsOn(relationNode)
+				// Set foreign key dependence
+				if field.IsFkDependence() {
+					relationNode := tree.GetNode(field.Depends.ForeignKey.Db, field.Depends.ForeignKey.Table)
+					relationNode.addDependent()
+					node.dependsOn(relationNode)
 				}
 			}
 		}

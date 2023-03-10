@@ -3,87 +3,77 @@ package seeder
 import (
 	"dbseeder/internal/modifiers"
 	"dbseeder/internal/schema"
+	"dbseeder/internal/seeder/generators/dependence"
+	"dbseeder/internal/seeder/generators/fake"
+	"dbseeder/internal/seeder/generators/list"
+	"dbseeder/pkg/helper"
 	"errors"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 	"github.com/sirupsen/logrus"
-	"math/rand"
 )
 
-type Seeder struct {
-	connections     map[string]*sqlx.DB
-	trxs            map[string]*sqlx.Tx
-	schema          *schema.Schema
-	plugins         *modifiers.ModifierStore
-	generatedValues *TableValues
-}
-
-type TableValues struct {
+type RelationValues struct {
 	//TODO: Optimize store values
 	Tables map[string][]map[string]any
 }
 
-func (t *TableValues) Add(tableCode string, rows []map[string]any) {
+func (t *RelationValues) Add(tableCode string, rows []map[string]any) {
 	t.Tables[tableCode] = rows
 }
 
-func (t *TableValues) Get(tableCode string) ([]map[string]any, error) {
+func (t *RelationValues) Get(tableCode string) ([]map[string]any, error) {
 	if v, exists := t.Tables[tableCode]; exists {
 		return v, nil
 	}
 	return nil, errors.New(fmt.Sprintf("values for table: %s didn't be generated", tableCode))
 }
 
-func (t *TableValues) IsTableGenerated(tableCode string) bool {
+func (t *RelationValues) isTableGenerated(tableCode string) bool {
 	if _, exists := t.Tables[tableCode]; exists {
 		return true
 	}
 	return false
 }
 
-func NewSeeder(sch *schema.Schema, plugins *modifiers.ModifierStore) (*Seeder, error) {
-	seeder := &Seeder{
-		connections: make(map[string]*sqlx.DB),
-		trxs:        make(map[string]*sqlx.Tx),
-		schema:      sch,
-		generatedValues: &TableValues{
-			Tables: make(map[string][]map[string]any, 0),
-		},
-		plugins: plugins,
-	}
-
-	return seeder, seeder.initConnections()
+type connectionPool struct {
+	connections map[string]*sqlx.DB
+	trxs        map[string]*sqlx.Tx
 }
 
-func (seeder *Seeder) initConnections() error {
-	var err error
-	for _, d := range seeder.schema.Databases.Databases {
-		if _, exists := seeder.connections[d.Name]; exists {
-			return errors.New(fmt.Sprintf("database with code name: %s already exists", d.Name))
-		}
-		seeder.connections[d.Name], err = sqlx.Open(d.Driver, d.DSN)
-		if err != nil {
-			return errors.New(fmt.Sprintf("open connection for %s has error: %s", d.Name, err.Error()))
-		}
-		if err = seeder.connections[d.Name].Ping(); err != nil {
-			return errors.New(fmt.Sprintf("error ping for %s error: %s", d.Name, err.Error()))
-		}
-		seeder.connections[d.Name].SetMaxOpenConns(10)
-		seeder.connections[d.Name].SetMaxIdleConns(10)
+func newConnectionPool() *connectionPool {
+	return &connectionPool{
+		connections: make(map[string]*sqlx.DB),
+		trxs:        make(map[string]*sqlx.Tx),
 	}
+}
 
+func (pool *connectionPool) initConnection(code, driver, dsn string) error {
+	var err error
+	if _, exists := pool.connections[code]; exists {
+		return errors.New(fmt.Sprintf("database with code name: %s already exists", code))
+	}
+	pool.connections[code], err = sqlx.Open(driver, dsn)
+	if err != nil {
+		return errors.New(fmt.Sprintf("open connection for %s has error: %s", code, err.Error()))
+	}
+	if err = pool.connections[code].Ping(); err != nil {
+		return errors.New(fmt.Sprintf("error ping for %s error: %s", code, err.Error()))
+	}
+	pool.connections[code].SetMaxOpenConns(10)
+	pool.connections[code].SetMaxIdleConns(10)
 	return nil
 }
 
-func (seeder *Seeder) startTrxs() error {
+func (pool *connectionPool) startTransactions() error {
 	var initTxErr error
-	for code, conn := range seeder.connections {
-		seeder.trxs[code], initTxErr = conn.Beginx()
+	for code, conn := range pool.connections {
+		pool.trxs[code], initTxErr = conn.Beginx()
 		if initTxErr != nil {
 			logrus.Errorf("Error on start transaction for %s. Err: %s", code, initTxErr)
-			seeder.rollbackTrxs()
+			pool.rollbackTransactions()
 			return initTxErr
 		}
 		logrus.Infof("Start transaction for %s", code)
@@ -92,46 +82,99 @@ func (seeder *Seeder) startTrxs() error {
 	return nil
 }
 
-func (seeder *Seeder) commitTrxs() {
-	for code, trx := range seeder.trxs {
+func (pool *connectionPool) getTransactionForDb(db string) (*sqlx.Tx, error) {
+	if trx, exists := pool.trxs[db]; exists {
+		return trx, nil
+	}
+
+	return nil, errors.New(fmt.Sprintf("unknown transaction for db: %s", db))
+}
+
+func (pool *connectionPool) commitTransactions() {
+	for code, trx := range pool.trxs {
 		trx.Commit()
 		logrus.Infof("Transaction for %s has been commited", code)
 	}
 }
 
-func (seeder *Seeder) rollbackTrxs() {
-	for code, trx := range seeder.trxs {
+func (pool *connectionPool) rollbackTransactions() {
+	for code, trx := range pool.trxs {
 		trx.Rollback()
 		logrus.Infof("Transaction for %s has been rollbacked", code)
 	}
 }
 
-func (seeder *Seeder) closeConnections() {
-	for _, c := range seeder.connections {
+func (pool *connectionPool) closeConnections() {
+	for _, c := range pool.connections {
 		c.Close()
 	}
 }
 
+type Seeder struct {
+	connPool       *connectionPool
+	schema         *schema.Schema
+	plugins        *modifiers.ModifierStore
+	relValues      *RelationValues
+	tableGenerator *TableGenerator
+}
+
+func NewSeeder(sch *schema.Schema, plugins *modifiers.ModifierStore) *Seeder {
+	relValues := &RelationValues{
+		Tables: make(map[string][]map[string]any, 0),
+	}
+	return &Seeder{
+		connPool:       newConnectionPool(),
+		schema:         sch,
+		plugins:        plugins,
+		tableGenerator: &TableGenerator{relationValues: relValues},
+		relValues:      relValues,
+	}
+}
+
+func (seeder *Seeder) initConnections() error {
+	for _, d := range seeder.schema.Databases.Databases {
+		err := seeder.connPool.initConnection(d.Name, d.Driver, d.DSN)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (seeder *Seeder) Run() error {
-	defer seeder.closeConnections()
-	if startTrxsError := seeder.startTrxs(); startTrxsError != nil {
-		seeder.rollbackTrxs()
+	initConnectionErr := seeder.initConnections()
+	if initConnectionErr != nil {
+		return initConnectionErr
+	}
+	defer seeder.connPool.closeConnections()
+
+	if startTrxsError := seeder.connPool.startTransactions(); startTrxsError != nil {
+		seeder.connPool.rollbackTransactions()
 	}
 	err := seeder.schema.Tree.Walk(seeder.walkingFn)
 
 	if err != nil {
-		seeder.rollbackTrxs()
+		seeder.connPool.rollbackTransactions()
 	} else {
-		seeder.commitTrxs()
+		seeder.connPool.commitTransactions()
 	}
 
 	return err
 }
 
 func (seeder *Seeder) walkingFn(code string, node *schema.TableDependenceNode) error {
-	if seeder.generatedValues.IsTableGenerated(code) {
+	if seeder.relValues.isTableGenerated(code) {
 		return nil
 	}
+	/// If table has dependencies - truncate it
+	if len(node.Dependencies) > 0 && node.Table.Action == schema.ActionGenerate {
+		truncateErr := seeder.truncate(node.DbName, node.Table.Name)
+		if truncateErr != nil {
+			return truncateErr
+		}
+	}
+
 	for _, dependency := range node.Dependencies {
 		err := seeder.walkingFn(dependency.Code, dependency)
 		if err != nil {
@@ -139,84 +182,204 @@ func (seeder *Seeder) walkingFn(code string, node *schema.TableDependenceNode) e
 		}
 	}
 
-	if node.Table.Action == schema.ActionGenerate {
-		/// Found length for generated values
-		rowsCount := node.Table.GetRowsCount()
-		if rowsCount == 0 {
-			return errors.New(
-				fmt.Sprintf(
-					"count rows and fill part for table: %s is empty, set count generated rows or make fill data",
-					code))
+	switch node.Table.Action {
+	case schema.ActionGenerate:
+		td, tableGenErr := seeder.tableGenerator.generate(code, node)
+		if tableGenErr != nil {
+			return tableGenErr
 		}
-
-		// Drop data from db
-		truncateErr := seeder.truncate(node.DbName, node.Table.Name)
-		if truncateErr != nil {
-			return truncateErr
-		}
-
-		// Columns for insert to db
-		columns := make([]string, 0, len(node.Table.Fields))
-		for fieldName, fVal := range node.Table.Fields {
-			if fVal.Generation == schema.GenerationTypeDb {
-				continue
-			}
-			columns = append(columns, fieldName)
-		}
-		// Values for insert to db
-		values := make([]any, 0, rowsCount*len(columns))
-
-		for c := 0; c < rowsCount; c++ {
-			for _, fieldName := range columns {
-				if len(node.Table.Fill) > c {
-					if v, exists := node.Table.Fill[c][fieldName]; exists {
-						values = append(values, v)
-						continue
-					}
-				}
-
-				fieldValue := node.Table.Fields[fieldName]
-
-				switch fieldValue.Generation {
-				case schema.GenerationTypeFaker:
-					v, vErr := Generate(fieldValue.Type)
-					if vErr != nil {
-						return vErr
-					}
-					values = append(values, v)
-				case schema.GenerationTypeList:
-					rIndex := rand.Intn(len(fieldValue.List) - 1)
-					values = append(values, fieldValue.List[rIndex])
-				case schema.GenerationDepends:
-					generatedVls, findErr := seeder.generatedValues.Get(
-						fmt.Sprintf("%s.%s",
-							fieldValue.Depends.Foreign[0].Db,
-							fieldValue.Depends.Foreign[0].Table))
-					if findErr != nil {
-						return findErr
-					}
-					rIndex := rand.Intn(len(generatedVls) - 1)
-					values = append(values, generatedVls[rIndex][fieldValue.Depends.Foreign[0].Field])
-				}
-			}
-		}
-
-		insertErr := seeder.insertToTable(node.DbName, node.Table.Name, columns, values)
+		insertErr := seeder.insert(node.DbName, node.Table.Name, td.columns, td.values)
 		if insertErr != nil {
 			return insertErr
 		}
-
-		/// Mysql and Postgres Has different ways for get ids, that's why simple way is select all generated data
-		return seeder.getDataFromDb(code, node)
+		/// Mysql and Postgres have different ways for get ids, that's why simple way is select all generated data
+		return seeder.loadDataFromDb(code, node)
+	case schema.ActionGet:
+		return seeder.loadDataFromDb(code, node)
+	default:
+		return errors.New(fmt.Sprintf("unknown action for table: %s", code))
 	}
-
-	return seeder.getDataFromDb(code, node)
 }
 
-func (seeder *Seeder) getDataFromDb(code string, node *schema.TableDependenceNode) error {
+type TableGenerator struct {
+	relationValues *RelationValues
+}
+
+type tableData struct {
+	rowsCount      int
+	columns        []string
+	values         []any
+	rowsHashes     map[string]bool
+	relations      map[string]map[int]bool
+	relationValues *RelationValues
+	node           *schema.TableDependenceNode
+}
+
+type orderedColumns struct {
+	cols []string
+}
+
+func (o *orderedColumns) exists(val string) bool {
+	for _, existValues := range o.cols {
+		if existValues == val {
+			return true
+		}
+	}
+
+	return false
+}
+
+// / TODO: Check circular dependencies
+func getOrderedColumns(columns *orderedColumns, fieldName string, fields map[string]schema.Field) {
+	field := fields[fieldName]
+	if field.IsExpressionDependence() {
+		for _, r := range field.Depends.Expression.Rows {
+			if columns.exists(r) {
+				continue
+			}
+			getOrderedColumns(columns, r, fields)
+		}
+	}
+	columns.cols = append(columns.cols, fieldName)
+}
+
+func (generator *TableGenerator) getColumns(node *schema.TableDependenceNode) ([]string, error) {
+	columns := &orderedColumns{cols: make([]string, 0)}
+	for fieldName, fldVal := range node.Table.Fields {
+		if fldVal.Generation == schema.GenerationTypeDb {
+			continue
+		}
+		if columns.exists(fieldName) {
+			continue
+		}
+
+		getOrderedColumns(columns, fieldName, node.Table.Fields)
+	}
+
+	return columns.cols, nil
+}
+
+func (generator *TableGenerator) initTableData(code string, node *schema.TableDependenceNode, relValues *RelationValues) (*tableData, error) {
+	/// Found length for generated values
+	rowsCount := node.Table.GetRowsCount()
+	if rowsCount == 0 {
+		return nil, errors.New(
+			fmt.Sprintf(
+				"count rows and fill part for table: %s is empty, set count generated rows or make fill data",
+				code))
+	}
+	columns, err := generator.getColumns(node)
+	if err != nil {
+		return nil, err
+	}
+
+	return &tableData{
+		rowsCount:      rowsCount,
+		columns:        columns,
+		values:         make([]any, 0, rowsCount*len(columns)),
+		rowsHashes:     make(map[string]bool, rowsCount),
+		relations:      make(map[string]map[int]bool, 0),
+		relationValues: relValues,
+		node:           node,
+	}, nil
+}
+
+func (generator *TableGenerator) generate(code string, node *schema.TableDependenceNode) (*tableData, error) {
+	td, tableDataErr := generator.initTableData(code, node, generator.relationValues)
+	if tableDataErr != nil {
+		return nil, tableDataErr
+	}
+
+	for c := 0; c < td.rowsCount; c++ {
+		exists := true
+		for ok := true; ok; ok = exists {
+			rowValues, rowGeneratedErr := td.generateRow(td.columns, c)
+			if rowGeneratedErr != nil {
+				return nil, rowGeneratedErr
+			}
+
+			// It table require no duplicates - check that this values has no identical rows
+			if td.node.Table.NoDuplicates {
+				sliceHash := helper.SliceHash(rowValues)
+				if _, exists = td.rowsHashes[sliceHash]; !exists {
+					td.values = append(td.values, rowValues...)
+					td.rowsHashes[sliceHash] = true
+				}
+			} else {
+				td.values = append(td.values, rowValues...)
+				exists = false
+			}
+		}
+	}
+
+	return td, nil
+}
+
+func (generator *tableData) generateRow(columns []string, rowNum int) ([]any, error) {
+	rowValues := make(map[string]any, len(columns))
+	values := make([]any, 0, len(columns))
+	for _, fieldName := range columns {
+		if len(generator.node.Table.Fill) > rowNum {
+			if v, exists := generator.node.Table.Fill[rowNum][fieldName]; exists {
+				values = append(values, v)
+				rowValues[fieldName] = v
+				continue
+			}
+		}
+
+		v, err := generator.generateFieldData(fieldName, rowValues)
+
+		if err == ErrGetFromDb {
+			continue
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		values = append(values, v)
+		rowValues[fieldName] = v
+
+	}
+
+	return values, nil
+}
+
+var ErrGetFromDb = errors.New("get field val from db")
+
+func (generator *tableData) generateFieldData(fieldName string, rowValues map[string]any) (any, error) {
+	fieldValue := generator.node.Table.Fields[fieldName]
+	switch fieldValue.Generation {
+	case schema.GenerationTypeFaker:
+		return fake.Generate(fieldName, fieldValue)
+	case schema.GenerationTypeList:
+		return list.Generate(fieldName, fieldValue)
+	case schema.GenerationDepends:
+		if fieldValue.IsFkDependence() {
+			return dependence.GenerateForeign(fieldValue, generator.relationValues, generator.relations)
+		}
+		if fieldValue.IsExpressionDependence() {
+			return dependence.GenerateExpression(fieldValue, rowValues)
+		}
+		return nil, errors.New(fmt.Sprintf("unknown dependence field generation type for %s", fieldName))
+	case schema.GenerationTypeDb:
+		return nil, ErrGetFromDb
+	default:
+		return nil, errors.New(fmt.Sprintf("unknown field generation type for %s", fieldName))
+	}
+}
+
+// TODO: Create db connection wrapper for use right requests for each database type
+// Db functions
+func (seeder *Seeder) loadDataFromDb(code string, node *schema.TableDependenceNode) error {
 	if node.HasDependents() {
+		conn, err := seeder.connPool.getTransactionForDb(node.DbName)
+		if err != nil {
+			return err
+		}
+
 		result := make([]map[string]any, 0)
-		rows, err := seeder.trxs[node.DbName].Queryx(fmt.Sprintf("SELECT * FROM %s", node.Table.Name))
+		rows, err := conn.Queryx(fmt.Sprintf("SELECT * FROM %s", node.Table.Name))
 		defer rows.Close()
 		if err != nil {
 			return errors.New(
@@ -227,29 +390,32 @@ func (seeder *Seeder) getDataFromDb(code string, node *schema.TableDependenceNod
 		}
 		for rows.Next() {
 			val := make(map[string]any, 0)
-			rows.MapScan(val)
+			scanErr := rows.MapScan(val)
+			if scanErr != nil {
+				return scanErr
+			}
 			result = append(result, val)
 		}
 
-		seeder.generatedValues.Add(code, result)
+		seeder.relValues.Add(code, result)
 	}
 	return nil
 }
 
-func (seeder *Seeder) insertToTable(db string, tableName string, columns []string, values []any) error {
-	if conn, exists := seeder.trxs[db]; exists {
+func (seeder *Seeder) insert(db string, tableName string, columns []string, values []any) error {
+	if conn, err := seeder.connPool.getTransactionForDb(db); err == nil {
 		rowsCountForInsert := len(values) / len(columns)
 		sql := conn.Rebind(generateInsertSql(tableName, columns, rowsCountForInsert))
 		return conn.QueryRowx(sql, values...).Err()
+	} else {
+		return err
 	}
-
-	return errors.New(fmt.Sprintf("unknown db with code: %s", db))
 }
 
 func (seeder *Seeder) truncate(db, tableName string) error {
-	if conn, exists := seeder.trxs[db]; exists {
+	if conn, err := seeder.connPool.getTransactionForDb(db); err == nil {
 		return conn.QueryRowx(fmt.Sprintf("TRUNCATE TABLE %s", tableName)).Err()
+	} else {
+		return err
 	}
-
-	return errors.New(fmt.Sprintf("unknown db with code: %s", db))
 }

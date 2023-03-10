@@ -10,6 +10,7 @@ import (
 
 type Action string
 type Generation string
+type ForeignKeyType string
 
 const (
 	ActionGenerate Action = "generate" // Generate list of values for insert to db
@@ -19,6 +20,9 @@ const (
 	GenerationTypeFaker Generation = "faker"   // Generate fake data
 	GenerationTypeList  Generation = "list"    // Get data from defined list (property List of Field struct)
 	GenerationDepends   Generation = "depends" // Mark field that it depends on another field (on same ot other table)
+
+	ManyToOne ForeignKeyType = "manyToOne"
+	OneToOne  ForeignKeyType = "oneToOne"
 )
 
 type Databases struct {
@@ -34,11 +38,13 @@ type Database struct {
 }
 
 type Table struct {
-	Name   string           `json:"name" yaml:"name"`     // Table name
-	Action Action           `json:"action" yaml:"action"` // Action (get from db or generate fake data)
-	Count  int              `json:"count" yaml:"count"`   // Count rows for generate values
-	Fields map[string]Field `json:"fields" yaml:"fields"`
-	Fill   []map[string]any `json:"fill" yaml:"fill"`
+	/// TODO: Add unique values block
+	NoDuplicates bool             `json:"no_duplicates" yaml:"noDuplicates"` // Allow duplicates or no
+	Count        int              `json:"count" yaml:"count"`                // Count rows for generate values
+	Name         string           `json:"name" yaml:"name"`                  // Table name
+	Action       Action           `json:"action" yaml:"action"`              // Action (get from db or generate fake data)
+	Fields       map[string]Field `json:"fields" yaml:"fields"`
+	Fill         []map[string]any `json:"fill" yaml:"fill"`
 }
 
 func (t *Table) GetRowsCount() int {
@@ -62,24 +68,38 @@ type Field struct {
 	Generation Generation `json:"generation" yaml:"generation"` // Generation strategy
 	Plugins    []string   `json:"plugins" yaml:"plugins"`       // Plugins list for apply
 	Depends    Dependence `json:"depends" yaml:"depends"`
-	List       []string   `json:"list" yaml:"list"`
+	List       []any      `json:"list" yaml:"list"`
+}
+
+func (fld *Field) IsFkDependence() bool {
+	return fld.Depends.ForeignKey.Db != "" && fld.Depends.ForeignKey.Table != "" && fld.Depends.ForeignKey.Field != ""
+}
+
+func (fld *Field) IsExpressionDependence() bool {
+	return fld.Depends.Expression.Expression != ""
 }
 
 type Dependence struct {
-	Foreign  []ForeignDependence  `json:"foreign" yaml:"foreign"`
-	Internal []InternalDependence `json:"internal" yaml:"internal"`
+	Expression ExpressionDependence `json:"expression" yaml:"expression"`
+	ForeignKey ForeignDependence    `json:"foreign_key" yaml:"foreign"`
 }
 
 type ForeignDependence struct {
-	Db         string `json:"db" yaml:"db"`
-	Table      string `json:"table" yaml:"table"`
-	Field      string `json:"field" yaml:"field"`
-	Expression string `json:"expression" yaml:"expression"`
+	Db    string         `json:"db" yaml:"db"`
+	Table string         `json:"table" yaml:"table"`
+	Field string         `json:"field" yaml:"field"`
+	Type  ForeignKeyType `json:"type" yaml:"type"`
 }
 
-type InternalDependence struct {
-	Field      string `json:"field" yaml:"field"`
-	Expression string `json:"expression" yaml:"expression"`
+type ExpressionDependence struct {
+	Expression string   `yaml:"expression" json:"expression"`
+	Rows       []string `json:"rows" yaml:"rows"`
+}
+
+type ExpressionForeignField struct {
+	Db    string `json:"db" yaml:"db"`
+	Table string `json:"table" yaml:"table"`
+	Field string `json:"field" yaml:"field"`
 }
 
 func NewDatabasesSchemaNotation(mainConf string) (*Databases, error) {
