@@ -14,6 +14,18 @@ export-schema - Show all schema files in one
 help - Show all commands  
 ```
 
+**Seed command**
+```bash
+./main -command seed -schema /path/to/schema.yml
+```
+
+**Parse command**
+
+```bash
+./main -command parse -schema /path/to/schema.yml > /path/to/table/output.yml
+```
+
+
 ### Allowed faker fields
 
 | Field code      | Description                                    |
