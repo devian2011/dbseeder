@@ -2,12 +2,6 @@ package color
 
 import "fmt"
 
-const (
-	greenColor  = "\u001B[1;32m%s\u001B[0m"
-	yellowColor = "\u001B[1;33m%s\u001B[0m"
-	redColor    = "\u001B[1;31m%s\u001B[0m"
-)
-
 type Code string
 
 const (
@@ -16,15 +10,16 @@ const (
 	Red    Code = "red"
 )
 
+var codeStrMap = map[Code]string{
+	Red:    "\u001B[1;31m%s\u001B[0m",
+	Green:  "\u001B[1;32m%s\u001B[0m",
+	Yellow: "\u001B[1;33m%s\u001B[0m",
+}
+
 func ColoredString(code Code, val string) string {
-	switch code {
-	case Green:
-		return fmt.Sprintf(greenColor, val)
-	case Yellow:
-		return fmt.Sprintf(yellowColor, val)
-	case Red:
-		return fmt.Sprintf(redColor, val)
-	default:
-		return val
+	if tmpl, exists := codeStrMap[code]; exists {
+		return fmt.Sprintf(tmpl, val)
 	}
+
+	return val
 }
