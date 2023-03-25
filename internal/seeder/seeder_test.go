@@ -7,7 +7,7 @@ import (
 
 func TestGetOrderedColumns(t *testing.T) {
 	fields := map[string]schema.Field{
-		"fullname": schema.Field{
+		"fullname": {
 			Type:       "",
 			Generation: "",
 			Plugins:    nil,
@@ -22,14 +22,14 @@ func TestGetOrderedColumns(t *testing.T) {
 			},
 			List: nil,
 		},
-		"firstname": schema.Field{
+		"firstname": {
 			Type:       "",
 			Generation: "",
 			Plugins:    nil,
 			Depends:    schema.Dependence{},
 			List:       nil,
 		},
-		"dt": schema.Field{
+		"dt": {
 			Type:       "",
 			Generation: "",
 			Plugins:    nil,
@@ -44,7 +44,7 @@ func TestGetOrderedColumns(t *testing.T) {
 			},
 			List: nil,
 		},
-		"lastname": schema.Field{
+		"lastname": {
 			Type:       "",
 			Generation: "",
 			Plugins:    nil,

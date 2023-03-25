@@ -1,12 +1,19 @@
 package fake
 
 import (
+	"dbseeder/internal/schema"
 	"testing"
 	"time"
 )
 
 func TestGenerateStr(t *testing.T) {
-	strAny, _ := Generate("string 10")
+	strAny, _ := Generate("str", schema.Field{
+		Type:       "string 10",
+		Generation: "faker",
+		Plugins:    nil,
+		Depends:    schema.Dependence{},
+		List:       nil,
+	})
 	str, isConverted := strAny.(string)
 	if !isConverted {
 		t.Errorf("wrong type for string")
@@ -17,7 +24,13 @@ func TestGenerateStr(t *testing.T) {
 }
 
 func TestGenerateDate(t *testing.T) {
-	dateAny, _ := Generate("date 2022-10-11 2022-11-11")
+	dateAny, _ := Generate("date", schema.Field{
+		Type:       "date 2022-10-11 2022-11-11",
+		Generation: "faker",
+		Plugins:    nil,
+		Depends:    schema.Dependence{},
+		List:       nil,
+	})
 	date, isConverted := dateAny.(time.Time)
 	if !isConverted {
 		t.Errorf("wrong type for date generation")
