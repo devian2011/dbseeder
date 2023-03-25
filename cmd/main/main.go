@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	command := flag.String("command", "seed", "seed database data")
+	command := flag.String("command", "help", "seed database data")
 	filePath := flag.String("schema", "./config/db.conf.yml", "Path to schema config")
 	flag.Parse()
 
