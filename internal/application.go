@@ -97,6 +97,7 @@ func (a *Application) fieldTypesDefinitions() error {
 
 func (a *Application) help() error {
 	fmt.Printf("%s - %s\n", color.ColoredString(color.Green, seedCommand), color.ColoredString(color.Yellow, "Fill database generated data"))
+	fmt.Printf("%s - %s\n", color.ColoredString(color.Green, parseCommand), color.ColoredString(color.Yellow, "Get and write tables for databases."))
 	fmt.Printf("%s - %s\n", color.ColoredString(color.Green, fieldTypeDefinitions), color.ColoredString(color.Yellow, "Show all allowed fields"))
 	fmt.Printf("%s - %s\n", color.ColoredString(color.Green, schemaDependencies), color.ColoredString(color.Yellow, "Show all dependecies btw tables and databases in schema"))
 	fmt.Printf("%s - %s\n", color.ColoredString(color.Green, modifiersList), color.ColoredString(color.Yellow, "Show all allowed modifiers"))
