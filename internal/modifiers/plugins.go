@@ -34,6 +34,18 @@ func (m ModifierStore) Apply(pluginName string, v any) (any, error) {
 	return v, ErrUnknownPlugin
 }
 
+func (m *ModifierStore) ApplyList(pluginNameList []string, v any) (any, error) {
+	var err error
+	for _, pluginName := range pluginNameList {
+		v, err = m.Apply(pluginName, v)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return v, nil
+}
+
 func (m ModifierStore) List() map[string]string {
 	out := make(map[string]string, 0)
 	for k, md := range m.store {

@@ -113,7 +113,6 @@ func (pool *connectionPool) closeConnections() {
 type Seeder struct {
 	connPool       *connectionPool
 	schema         *schema.Schema
-	plugins        *modifiers.ModifierStore
 	relValues      *RelationValues
 	tableGenerator *TableGenerator
 }
@@ -125,8 +124,7 @@ func NewSeeder(sch *schema.Schema, plugins *modifiers.ModifierStore) *Seeder {
 	return &Seeder{
 		connPool:       newConnectionPool(),
 		schema:         sch,
-		plugins:        plugins,
-		tableGenerator: &TableGenerator{relationValues: relValues},
+		tableGenerator: &TableGenerator{relationValues: relValues, plugins: plugins},
 		relValues:      relValues,
 	}
 }
@@ -188,6 +186,7 @@ func (seeder *Seeder) walkingFn(code string, node *schema.TableDependenceNode) e
 		if tableGenErr != nil {
 			return tableGenErr
 		}
+
 		insertErr := seeder.insert(node.DbName, node.Table.Name, td.columns, td.values)
 		if insertErr != nil {
 			return insertErr
@@ -203,6 +202,7 @@ func (seeder *Seeder) walkingFn(code string, node *schema.TableDependenceNode) e
 
 type TableGenerator struct {
 	relationValues *RelationValues
+	plugins        *modifiers.ModifierStore
 }
 
 type tableData struct {
@@ -213,6 +213,7 @@ type tableData struct {
 	relations      map[string]map[int]bool
 	relationValues *RelationValues
 	node           *schema.TableDependenceNode
+	plugins        *modifiers.ModifierStore
 }
 
 type orderedColumns struct {
@@ -281,6 +282,7 @@ func (generator *TableGenerator) initTableData(code string, node *schema.TableDe
 		relations:      make(map[string]map[int]bool, 0),
 		relationValues: relValues,
 		node:           node,
+		plugins:        generator.plugins,
 	}, nil
 }
 
@@ -351,9 +353,17 @@ func (generator *tableData) generateFieldData(fieldName string, rowValues map[st
 	fieldValue := generator.node.Table.Fields[fieldName]
 	switch fieldValue.Generation {
 	case schema.GenerationTypeFaker:
-		return fake.Generate(fieldName, fieldValue)
+		vl, err := fake.Generate(fieldName, fieldValue)
+		if err != nil {
+			return vl, err
+		}
+		return generator.plugins.ApplyList(fieldValue.Plugins, vl)
 	case schema.GenerationTypeList:
-		return list.Generate(fieldName, fieldValue)
+		vl, err := list.Generate(fieldName, fieldValue)
+		if err != nil {
+			return vl, err
+		}
+		return generator.plugins.ApplyList(fieldValue.Plugins, vl)
 	case schema.GenerationDepends:
 		if fieldValue.IsFkDependence() {
 			return dependence.GenerateForeign(fieldValue, generator.relationValues, generator.relations)
