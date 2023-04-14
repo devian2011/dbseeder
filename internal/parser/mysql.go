@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"database/sql"
 	"dbseeder/internal/schema"
 	"fmt"
 	"github.com/jmoiron/sqlx"
@@ -60,17 +61,17 @@ func getMysqlTables(db *sqlx.DB) ([]string, error) {
 
 func getMysqlColumns(db *sqlx.DB, tableName string) ([]string, error) {
 	type mysqlColumns struct {
-		Field   string `db:"field"`
-		Type    string `db:"Type"`
-		Null    string `db:"Null"`
-		Key     string `db:"Key"`
-		Default string `db:"Default"`
-		Extra   string `db:"Extra"`
+		Field   string         `db:"Field"`
+		Type    string         `db:"Type"`
+		Null    sql.NullString `db:"Null"`
+		Key     sql.NullString `db:"Key"`
+		Default sql.NullString `db:"Default"`
+		Extra   sql.NullString `db:"Extra"`
 	}
 
 	reqResult := make([]mysqlColumns, 0)
 	selectErr := db.Select(&reqResult, fmt.Sprintf(getMysqlColumnsSql, tableName))
-	result := make([]string, len(reqResult))
+	result := make([]string, 0, len(reqResult))
 	for _, r := range reqResult {
 		result = append(result, r.Field)
 	}
