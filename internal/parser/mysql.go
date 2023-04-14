@@ -11,7 +11,7 @@ const (
 	getMysqlColumnsSql = "SHOW COLUMNS FROM %s"
 )
 
-func MysqlParse(db *sqlx.DB, dbName string) ([]schema.Table, error) {
+func MysqlParse(db *sqlx.DB) ([]schema.Table, error) {
 	tableNames, tableNamesErr := getMysqlTables(db)
 	if tableNamesErr != nil {
 		return nil, tableNamesErr
@@ -77,5 +77,3 @@ func getMysqlColumns(db *sqlx.DB, tableName string) ([]string, error) {
 
 	return result, selectErr
 }
-
-

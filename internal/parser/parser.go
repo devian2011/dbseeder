@@ -73,7 +73,7 @@ func (parser *Parser) Parse() (*schema.Databases, error) {
 				Tables:     tables,
 			}
 		case "mysql":
-			tables, err := MysqlParse(conn, code)
+			tables, err := MysqlParse(conn)
 			if err != nil {
 				return nil, err
 			}
