@@ -15,6 +15,7 @@ help - Show all commands
 ```
 
 **Seed command**
+
 ```bash
 ./main -command seed -schema /path/to/schema.yml
 ```
@@ -25,11 +26,12 @@ help - Show all commands
 ./main -command parse -schema /path/to/schema.yml > /path/to/table/output.yml
 ```
 
-
 ### Allowed faker fields
 
 | Field code      | Description                                    |
 |-----------------|------------------------------------------------|
+| fieldNull       | set null                                       |
+| fieldEmpty      | set empty field                                |
 | url             | url                                            |
 | firstName       | Field first name                               |
 | string          | String field can add length like - 'string 15' |
@@ -55,8 +57,8 @@ help - Show all commands
 | mac             | Mac Address                                    |
 | address->zip    | Address zipcode                                |
 
-
 ## Configuration
+
 ### Databases section
 
 ```yaml

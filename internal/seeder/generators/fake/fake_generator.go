@@ -13,6 +13,8 @@ import (
 type FieldType string
 
 const (
+	fieldNull           FieldType = "null"
+	fieldEmpty          FieldType = "empty"
 	fieldString         FieldType = "string"
 	fieldInt            FieldType = "int"
 	fieldEmail          FieldType = "email"
@@ -40,6 +42,8 @@ const (
 )
 
 var FieldTypesMap = map[FieldType]string{
+	fieldNull:           "Null field",
+	fieldEmpty:          "Empty string field",
 	fieldString:         "String field can add length like - 'string 15'",
 	fieldInt:            "Int32 field. Min Max - 'int 0 10'",
 	fieldEmail:          "Email field",
@@ -78,6 +82,10 @@ func Generate(fieldName string, fieldVal schema.Field) (any, error) {
 
 	fieldType := FieldType(parts[0])
 	switch fieldType {
+	case fieldNull:
+		return nil, nil
+	case fieldEmpty:
+		return "", nil
 	case fieldString:
 		size := 10
 		if len(parts) >= 2 {
