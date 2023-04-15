@@ -41,10 +41,10 @@ type Table struct {
 	/// TODO: Add unique values block
 	NoDuplicates bool             `json:"no_duplicates" yaml:"noDuplicates"` // Allow duplicates or no
 	Count        int              `json:"count" yaml:"count"`                // Count rows for generate values
-	Name         string           `json:"name" yaml:"name"`                  // Table name
-	Action       Action           `json:"action" yaml:"action"`              // Action (get from db or generate fake data)
-	Fields       map[string]Field `json:"fields" yaml:"fields"`
-	Fill         []map[string]any `json:"fill" yaml:"fill"`
+	Name         string           `json:"name" yaml:"name,omitempty"`        // Table name
+	Action       Action           `json:"action" yaml:"action,omitempty"`    // Action (get from db or generate fake data)
+	Fields       map[string]Field `json:"fields" yaml:"fields,omitempty"`
+	Fill         []map[string]any `json:"fill" yaml:"fill,omitempty"`
 }
 
 func (t *Table) GetRowsCount() int {
@@ -64,11 +64,11 @@ func (t *Table) IsLoadFromDb() bool {
 }
 
 type Field struct {
-	Type       string     `json:"type" yaml:"type"`             // Type of field - string, email, hash, mac, ip and so on... See types constants
-	Generation Generation `json:"generation" yaml:"generation"` // Generation strategy
-	Plugins    []string   `json:"plugins" yaml:"plugins"`       // Plugins list for apply
-	Depends    Dependence `json:"depends" yaml:"depends"`
-	List       []any      `json:"list" yaml:"list"`
+	Type       string     `json:"type" yaml:"type,omitempty"`             // Type of field - string, email, hash, mac, ip and so on... See types constants
+	Generation Generation `json:"generation" yaml:"generation,omitempty"` // Generation strategy
+	Plugins    []string   `json:"plugins" yaml:"plugins,omitempty"`       // Plugins list for apply
+	Depends    Dependence `json:"depends" yaml:"depends,omitempty"`
+	List       []any      `json:"list" yaml:"list,omitempty"`
 }
 
 func (fld *Field) IsFkDependence() bool {
@@ -80,26 +80,26 @@ func (fld *Field) IsExpressionDependence() bool {
 }
 
 type Dependence struct {
-	Expression ExpressionDependence `json:"expression" yaml:"expression"`
-	ForeignKey ForeignDependence    `json:"foreign_key" yaml:"foreign"`
+	Expression ExpressionDependence `json:"expression" yaml:"expression,omitempty"`
+	ForeignKey ForeignDependence    `json:"foreign_key" yaml:"foreign,omitempty"`
 }
 
 type ForeignDependence struct {
-	Db    string         `json:"db" yaml:"db"`
-	Table string         `json:"table" yaml:"table"`
-	Field string         `json:"field" yaml:"field"`
-	Type  ForeignKeyType `json:"type" yaml:"type"`
+	Db    string         `json:"db" yaml:"db,omitempty"`
+	Table string         `json:"table" yaml:"table,omitempty"`
+	Field string         `json:"field" yaml:"field,omitempty"`
+	Type  ForeignKeyType `json:"type" yaml:"type,omitempty"`
 }
 
 type ExpressionDependence struct {
-	Expression string   `yaml:"expression" json:"expression"`
-	Rows       []string `json:"rows" yaml:"rows"`
+	Expression string   `yaml:"expression" json:"expression,omitempty"`
+	Rows       []string `json:"rows" yaml:"rows,omitempty"`
 }
 
 type ExpressionForeignField struct {
-	Db    string `json:"db" yaml:"db"`
-	Table string `json:"table" yaml:"table"`
-	Field string `json:"field" yaml:"field"`
+	Db    string `json:"db" yaml:"db,omitempty"`
+	Table string `json:"table" yaml:"table,omitempty"`
+	Field string `json:"field" yaml:"field,omitempty"`
 }
 
 func NewDatabasesSchemaNotation(mainConf string) (*Databases, error) {

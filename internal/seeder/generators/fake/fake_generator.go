@@ -4,6 +4,7 @@ import (
 	"dbseeder/internal/schema"
 	"errors"
 	"fmt"
+	"math/rand"
 	"strconv"
 	"strings"
 	"syreclabs.com/go/faker"
@@ -15,6 +16,7 @@ type FieldType string
 const (
 	fieldNull           FieldType = "null"
 	fieldEmpty          FieldType = "empty"
+	fieldBool           FieldType = "bool"
 	fieldString         FieldType = "string"
 	fieldInt            FieldType = "int"
 	fieldEmail          FieldType = "email"
@@ -44,6 +46,7 @@ const (
 var FieldTypesMap = map[FieldType]string{
 	fieldNull:           "Null field",
 	fieldEmpty:          "Empty string field",
+	fieldBool:           "Boolean field",
 	fieldString:         "String field can add length like - 'string 15'",
 	fieldInt:            "Int32 field. Min Max - 'int 0 10'",
 	fieldEmail:          "Email field",
@@ -86,6 +89,9 @@ func Generate(fieldName string, fieldVal schema.Field) (any, error) {
 		return nil, nil
 	case fieldEmpty:
 		return "", nil
+	case fieldBool:
+		rand.Seed(time.Now().UnixNano())
+		return rand.Intn(2) == 1, nil
 	case fieldString:
 		size := 10
 		if len(parts) >= 2 {
