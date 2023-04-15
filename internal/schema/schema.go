@@ -26,7 +26,7 @@ func (schema Schema) Check() error {
 				for fieldName, field := range dep.Table.Fields {
 					if field.IsFkDependence() && field.Depends.ForeignKey.Type == OneToOne {
 						depNode := schema.Tree.GetNode(field.Depends.ForeignKey.Db, field.Depends.ForeignKey.Table)
-						if node.Table.GetRowsCount() != depNode.Table.GetRowsCount() {
+						if node.Table.GetRowsCount() >= depNode.Table.GetRowsCount() {
 							return errors.New(
 								fmt.Sprintf("in fk oneToOne relation count of rows MUST be equal (%s.%s.%s - %s.%s.%s)",
 									depNode.DbName, depNode.Table.Name, field.Depends.ForeignKey.Field,
