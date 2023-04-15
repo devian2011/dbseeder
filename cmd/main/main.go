@@ -5,6 +5,8 @@ import (
 	"dbseeder/internal"
 	"flag"
 	"github.com/sirupsen/logrus"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
@@ -12,7 +14,10 @@ func main() {
 	filePath := flag.String("schema", "./config/db.conf.yml", "Path to schema config")
 	flag.Parse()
 
-	app, err := internal.NewApplication(*filePath, context.Background())
+	ctx := context.Background()
+	signal.NotifyContext(ctx, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGABRT)
+
+	app, err := internal.NewApplication(ctx, *filePath)
 	if err != nil {
 		logrus.Errorln("Error on init application. Error: ", err.Error())
 		return
