@@ -2,6 +2,7 @@ package seeder
 
 import (
 	"dbseeder/internal/schema"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -60,8 +61,6 @@ func TestGetOrderedColumns(t *testing.T) {
 	}
 	/// Check only last points (this points must be right ordered)
 	for c := 2; c < 4; c++ {
-		if wait.cols[c] != expected[c] {
-			t.Errorf("wrong columns order Actual: %+v Expected %+v", wait.cols, expected)
-		}
+		assert.Equalf(t, expected[c], wait.cols[c], "wrong columns order Actual: %+v Expected %+v", wait.cols, expected)
 	}
 }

@@ -2,6 +2,7 @@ package dependence
 
 import (
 	"dbseeder/internal/schema"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -26,7 +27,5 @@ func TestGenerateExpression(t *testing.T) {
 		t.Errorf("get generation expression error: %s", err.Error())
 	}
 
-	if expected != actual.(string) {
-		t.Errorf("values is not actual. Actual - %s, Expected - %s", actual, expected)
-	}
+	assert.Equalf(t, expected, actual.(string), "values is not actual. Actual - %s, Expected - %s", actual, expected)
 }

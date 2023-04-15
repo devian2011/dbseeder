@@ -2,6 +2,7 @@ package fake
 
 import (
 	"dbseeder/internal/schema"
+	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 )
@@ -15,12 +16,8 @@ func TestGenerateStr(t *testing.T) {
 		List:       nil,
 	})
 	str, isConverted := strAny.(string)
-	if !isConverted {
-		t.Errorf("wrong type for string")
-	}
-	if len(str) != 10 {
-		t.Errorf("wrong string generation, str len should be eq 10")
-	}
+	assert.True(t, isConverted, "wrong type for string")
+	assert.Len(t, str, 10, "wrong string generation, str len should be eq 10")
 }
 
 func TestGenerateDate(t *testing.T) {
