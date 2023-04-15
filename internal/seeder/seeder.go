@@ -411,19 +411,19 @@ func (seeder *Seeder) loadDataFromDb(code string, node *schema.TableDependenceNo
 }
 
 func (seeder *Seeder) insert(db string, tableName string, columns []string, values []any) error {
-	if conn, err := seeder.connPool.getTransactionForDb(db); err == nil {
-		rowsCountForInsert := len(values) / len(columns)
-		sql := conn.Rebind(generateInsertSQL(tableName, columns, rowsCountForInsert))
-		return conn.QueryRowx(sql, values...).Err()
-	} else {
+	conn, err := seeder.connPool.getTransactionForDb(db)
+	if err != nil {
 		return err
 	}
+	rowsCountForInsert := len(values) / len(columns)
+	sql := conn.Rebind(generateInsertSQL(tableName, columns, rowsCountForInsert))
+	return conn.QueryRowx(sql, values...).Err()
 }
 
 func (seeder *Seeder) truncate(db, tableName string) error {
-	if conn, err := seeder.connPool.getTransactionForDb(db); err == nil {
-		return conn.QueryRowx(fmt.Sprintf("TRUNCATE TABLE %s", tableName)).Err()
-	} else {
+	conn, err := seeder.connPool.getTransactionForDb(db)
+	if err != nil {
 		return err
 	}
+	return conn.QueryRowx(fmt.Sprintf("TRUNCATE TABLE %s", tableName)).Err()
 }
