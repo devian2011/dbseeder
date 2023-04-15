@@ -22,7 +22,7 @@ func TestFillPlaceholderString(t *testing.T) {
 }
 
 func TestGenerateInsertSql(t *testing.T) {
-	actual := generateInsertSql("info", []string{"id", "name", "val"}, 3)
+	actual := generateInsertSQL("info", []string{"id", "name", "val"}, 3)
 	expected := "INSERT INTO info (id,name,val) VALUES (?,?,?),(?,?,?),(?,?,?)"
 
 	assert.Equalf(t, actual, expected, "Actual '%s' must be eq to Expected '%s'", actual, expected)

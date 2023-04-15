@@ -32,7 +32,8 @@ type Application struct {
 	modifiers  *modifiers.ModifierStore
 }
 
-func NewApplication(dbConfFilePath string, ctx context.Context) (*Application, error) {
+// NewApplication create new application instance
+func NewApplication(ctx context.Context, dbConfFilePath string) (*Application, error) {
 	notation, parseSchemeErr := schema.NewDatabasesSchemaNotation(dbConfFilePath)
 	if parseSchemeErr != nil {
 		return nil, parseSchemeErr
@@ -62,6 +63,7 @@ func NewApplication(dbConfFilePath string, ctx context.Context) (*Application, e
 	return app, nil
 }
 
+// Run run application
 func (a *Application) Run(command string) error {
 	if fn, exists := a.commandMap[command]; exists {
 		return fn()

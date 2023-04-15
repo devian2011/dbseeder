@@ -30,7 +30,7 @@ func fillPlaceholdersString(placeholderString string, vCount int) string {
 	return b.String()
 }
 
-func generateInsertSql(tableName string, columns []string, valuesCount int) string {
+func generateInsertSQL(tableName string, columns []string, valuesCount int) string {
 	return fmt.Sprintf(
 		"INSERT INTO %s (%s) VALUES %s",
 		tableName,

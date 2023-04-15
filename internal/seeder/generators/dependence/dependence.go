@@ -2,7 +2,6 @@ package dependence
 
 import (
 	"dbseeder/internal/schema"
-	"errors"
 	"fmt"
 	"github.com/antonmedv/expr"
 	"math/rand"
@@ -29,7 +28,7 @@ func GenerateForeign(fieldVal schema.Field, genValues GeneratedValues, relations
 		} else {
 			// Find biggest index from relation map
 			/// TODO: Try to optimize algo
-			for k, _ := range relations[fieldVal.Depends.ForeignKey.Field] {
+			for k := range relations[fieldVal.Depends.ForeignKey.Field] {
 				if rIndex < k {
 					rIndex = k
 				}
@@ -51,7 +50,7 @@ func GenerateExpression(fieldVal schema.Field, rowsVal map[string]any) (any, err
 		if val, exists := rowsVal[row]; exists {
 			ctx["row"][row] = val
 		} else {
-			return nil, errors.New(fmt.Sprintf("cannot find ctx field: %s in generated values", row))
+			return nil, fmt.Errorf("cannot find ctx field: %s in generated values", row)
 		}
 	}
 

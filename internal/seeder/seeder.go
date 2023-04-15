@@ -28,7 +28,7 @@ func (t *RelationValues) Get(tableCode string) ([]map[string]any, error) {
 	if v, exists := t.Tables[tableCode]; exists {
 		return v, nil
 	}
-	return nil, errors.New(fmt.Sprintf("values for table: %s didn't be generated", tableCode))
+	return nil, fmt.Errorf("values for table: %s didn't be generated", tableCode)
 }
 
 func (t *RelationValues) isTableGenerated(tableCode string) bool {
@@ -53,14 +53,14 @@ func newConnectionPool() *connectionPool {
 func (pool *connectionPool) initConnection(code, driver, dsn string) error {
 	var err error
 	if _, exists := pool.connections[code]; exists {
-		return errors.New(fmt.Sprintf("database with code name: %s already exists", code))
+		return fmt.Errorf("database with code name: %s already exists", code)
 	}
 	pool.connections[code], err = sqlx.Open(driver, dsn)
 	if err != nil {
-		return errors.New(fmt.Sprintf("open connection for %s has error: %s", code, err.Error()))
+		return fmt.Errorf("open connection for %s has error: %s", code, err.Error())
 	}
 	if err = pool.connections[code].Ping(); err != nil {
-		return errors.New(fmt.Sprintf("error ping for %s error: %s", code, err.Error()))
+		return fmt.Errorf("error ping for %s error: %s", code, err.Error())
 	}
 	pool.connections[code].SetMaxOpenConns(10)
 	pool.connections[code].SetMaxIdleConns(10)
@@ -87,7 +87,7 @@ func (pool *connectionPool) getTransactionForDb(db string) (*sqlx.Tx, error) {
 		return trx, nil
 	}
 
-	return nil, errors.New(fmt.Sprintf("unknown transaction for db: %s", db))
+	return nil, fmt.Errorf("unknown transaction for db: %s", db)
 }
 
 func (pool *connectionPool) commitTransactions() {
@@ -196,7 +196,7 @@ func (seeder *Seeder) walkingFn(code string, node *schema.TableDependenceNode) e
 	case schema.ActionGet:
 		return seeder.loadDataFromDb(code, node)
 	default:
-		return errors.New(fmt.Sprintf("unknown action for table: %s", code))
+		return fmt.Errorf("unknown action for table: %s", code)
 	}
 }
 
@@ -264,10 +264,9 @@ func (generator *TableGenerator) initTableData(code string, node *schema.TableDe
 	/// Found length for generated values
 	rowsCount := node.Table.GetRowsCount()
 	if rowsCount == 0 {
-		return nil, errors.New(
-			fmt.Sprintf(
-				"count rows and fill part for table: %s is empty, set count generated rows or make fill data",
-				code))
+		return nil, fmt.Errorf(
+			"count rows and fill part for table: %s is empty, set count generated rows or make fill data",
+			code)
 	}
 	columns, err := generator.getColumns(node)
 	if err != nil {
@@ -371,11 +370,11 @@ func (generator *tableData) generateFieldData(fieldName string, rowValues map[st
 		if fieldValue.IsExpressionDependence() {
 			return dependence.GenerateExpression(fieldValue, rowValues)
 		}
-		return nil, errors.New(fmt.Sprintf("unknown dependence field generation type for %s", fieldName))
+		return nil, fmt.Errorf("unknown dependence field generation type for %s", fieldName)
 	case schema.GenerationTypeDb:
 		return nil, ErrGetFromDb
 	default:
-		return nil, errors.New(fmt.Sprintf("unknown field generation type for %s", fieldName))
+		return nil, fmt.Errorf("unknown field generation type for %s", fieldName)
 	}
 }
 
@@ -392,11 +391,10 @@ func (seeder *Seeder) loadDataFromDb(code string, node *schema.TableDependenceNo
 		rows, err := conn.Queryx(fmt.Sprintf("SELECT * FROM %s", node.Table.Name))
 		defer rows.Close()
 		if err != nil {
-			return errors.New(
-				fmt.Sprintf(
-					"error for get values from table: %s. Error: %s",
-					code,
-					err.Error()))
+			return fmt.Errorf(
+				"error for get values from table: %s. Error: %s",
+				code,
+				err.Error())
 		}
 		for rows.Next() {
 			val := make(map[string]any, 0)
@@ -415,7 +413,7 @@ func (seeder *Seeder) loadDataFromDb(code string, node *schema.TableDependenceNo
 func (seeder *Seeder) insert(db string, tableName string, columns []string, values []any) error {
 	if conn, err := seeder.connPool.getTransactionForDb(db); err == nil {
 		rowsCountForInsert := len(values) / len(columns)
-		sql := conn.Rebind(generateInsertSql(tableName, columns, rowsCountForInsert))
+		sql := conn.Rebind(generateInsertSQL(tableName, columns, rowsCountForInsert))
 		return conn.QueryRowx(sql, values...).Err()
 	} else {
 		return err

@@ -6,9 +6,9 @@ import (
 )
 
 const (
-	getPsqlTablesSql  = "SELECT table_name FROM information_schema.tables WHERE table_schema='public'"
-	getPsqlColumnsSql = "SELECT column_name FROM information_schema.columns WHERE table_name=$1;"
-	getPsqlFkSql      = `
+	getPsqlTablesSQL  = "SELECT table_name FROM information_schema.tables WHERE table_schema='public'"
+	getPsqlColumnsSQL = "SELECT column_name FROM information_schema.columns WHERE table_name=$1;"
+	getPsqlFkSQL      = `
 SELECT
     kcu.column_name,
     ccu.table_name AS foreign_table_name,
@@ -24,6 +24,7 @@ FROM
 WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_name=$1`
 )
 
+// PsqlParse parse postgres schema and create notation
 func PsqlParse(db *sqlx.DB, dbName string) ([]schema.Table, error) {
 	tableNames, tableNamesErr := getPsqlTables(db)
 	if tableNamesErr != nil {
@@ -80,14 +81,14 @@ func PsqlParse(db *sqlx.DB, dbName string) ([]schema.Table, error) {
 
 func getPsqlTables(db *sqlx.DB) ([]string, error) {
 	tableNames := make([]string, 0)
-	selectErr := db.Select(&tableNames, getPsqlTablesSql)
+	selectErr := db.Select(&tableNames, getPsqlTablesSQL)
 
 	return tableNames, selectErr
 }
 
 func getPsqlColumns(db *sqlx.DB, tableName string) ([]string, error) {
 	result := make([]string, 0)
-	selectErr := db.Select(&result, getPsqlColumnsSql, tableName)
+	selectErr := db.Select(&result, getPsqlColumnsSQL, tableName)
 
 	return result, selectErr
 }
@@ -105,7 +106,7 @@ func getPsqlDependencies(db *sqlx.DB, tableName string) (map[string]psqlFkDepend
 	}
 
 	requestResult := make([]outputStr, 0)
-	selectErr := db.Select(&requestResult, getPsqlFkSql, tableName)
+	selectErr := db.Select(&requestResult, getPsqlFkSQL, tableName)
 	if selectErr != nil {
 		return nil, selectErr
 	}

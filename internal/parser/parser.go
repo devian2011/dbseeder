@@ -22,25 +22,27 @@ func newConnectionPool() *connectionPool {
 func (pool *connectionPool) initConnection(code, driver, dsn string) error {
 	var err error
 	if _, exists := pool.connections[code]; exists {
-		return errors.New(fmt.Sprintf("database with code name: %s already exists", code))
+		return fmt.Errorf("database with code name: %s already exists", code)
 	}
 	pool.connections[code], err = sqlx.Open(driver, dsn)
 	if err != nil {
 		return errors.New(fmt.Sprintf("open connection for %s has error: %s", code, err.Error()))
 	}
 	if err = pool.connections[code].Ping(); err != nil {
-		return errors.New(fmt.Sprintf("error ping for %s error: %s", code, err.Error()))
+		return fmt.Errorf("error ping for %s error: %s", code, err.Error())
 	}
 	pool.connections[code].SetMaxOpenConns(10)
 	pool.connections[code].SetMaxIdleConns(10)
 	return nil
 }
 
+// Parser instance for parse databases
 type Parser struct {
 	cfg      *schema.Schema
 	connPool *connectionPool
 }
 
+// NewParser create parser instance
 func NewParser(cfg *schema.Schema) (*Parser, error) {
 	parser := &Parser{
 		cfg:      cfg,
@@ -56,6 +58,7 @@ func NewParser(cfg *schema.Schema) (*Parser, error) {
 	return parser, nil
 }
 
+// Parse parse db schema
 func (parser *Parser) Parse() (*schema.Databases, error) {
 	databases := make(map[string]*schema.Database, 0)
 	for code, conn := range parser.connPool.connections {

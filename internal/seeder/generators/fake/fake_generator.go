@@ -2,7 +2,6 @@ package fake
 
 import (
 	"dbseeder/internal/schema"
-	"errors"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -32,7 +31,7 @@ const (
 	fieldCountry        FieldType = "country"
 	fieldCountryCode    FieldType = "country->code"
 	fieldMoney          FieldType = "money"
-	fieldUrl            FieldType = "url"
+	fieldURL            FieldType = "url"
 	fieldDomainName     FieldType = "domain"
 	fieldFullName       FieldType = "name"
 	fieldFirstName      FieldType = "firstName"
@@ -62,7 +61,7 @@ var FieldTypesMap = map[FieldType]string{
 	fieldCountry:        "Country",
 	fieldCountryCode:    "Country code",
 	fieldMoney:          "Money",
-	fieldUrl:            "Url",
+	fieldURL:            "Url",
 	fieldDomainName:     "Domain name",
 	fieldFullName:       "Field full name",
 	fieldFirstName:      "Field first name",
@@ -80,7 +79,7 @@ type Modifier interface {
 func Generate(fieldName string, fieldVal schema.Field) (any, error) {
 	parts := strings.Split(fieldVal.Type, " ")
 	if len(parts) <= 0 {
-		return nil, errors.New(fmt.Sprintf("wrong type format for %s", fieldName))
+		return nil, fmt.Errorf("wrong type format for %s", fieldName)
 	}
 
 	fieldType := FieldType(parts[0])
@@ -142,7 +141,7 @@ func Generate(fieldName string, fieldVal schema.Field) (any, error) {
 		return faker.Name().FirstName(), nil
 	case fieldLastName:
 		return faker.Name().LastName(), nil
-	case fieldUrl:
+	case fieldURL:
 		return faker.Internet().Url(), nil
 	case fieldDomainName:
 		return faker.Internet().DomainName(), nil
@@ -174,6 +173,6 @@ func Generate(fieldName string, fieldVal schema.Field) (any, error) {
 	case fieldAddressZipCode:
 		return faker.Address().ZipCode(), nil
 	default:
-		return nil, errors.New(fmt.Sprintf("unknown field type for %s", fieldName))
+		return nil, fmt.Errorf("unknown field type for %s", fieldName)
 	}
 }

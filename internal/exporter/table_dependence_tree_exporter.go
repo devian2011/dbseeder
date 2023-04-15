@@ -7,11 +7,13 @@ import (
 	"strings"
 )
 
+// TableDependenceTreeExporter tree exporter
 type TableDependenceTreeExporter struct {
 	wr   io.Writer
 	tree *schema.TableDependenceTree
 }
 
+// NewTableDependenceTreeExporter create new dependence tree exporter instance
 func NewTableDependenceTreeExporter(wr io.Writer, tree *schema.TableDependenceTree) *TableDependenceTreeExporter {
 	return &TableDependenceTreeExporter{
 		wr:   wr,
@@ -19,6 +21,7 @@ func NewTableDependenceTreeExporter(wr io.Writer, tree *schema.TableDependenceTr
 	}
 }
 
+// Export export table dependence to stdout
 func (exporter *TableDependenceTreeExporter) Export() error {
 	return exporter.tree.Walk(exporter.nodeHandler)
 }

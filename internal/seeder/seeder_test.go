@@ -56,7 +56,7 @@ func TestGetOrderedColumns(t *testing.T) {
 	expected := []string{"firstname", "lastname", "fullname", "dt"}
 	wait := &orderedColumns{cols: make([]string, 0)}
 
-	for f, _ := range fields {
+	for f := range fields {
 		getOrderedColumns(wait, f, fields)
 	}
 	/// Check only last points (this points must be right ordered)

@@ -8,10 +8,11 @@ import (
 )
 
 const (
-	getMysqlTablesSql  = "SHOW TABLES"
-	getMysqlColumnsSql = "SHOW COLUMNS FROM %s"
+	getMysqlTablesSQL  = "SHOW TABLES"
+	getMysqlColumnsSQL = "SHOW COLUMNS FROM %s"
 )
 
+// MysqlParse parse mysql schema and return it to notation
 func MysqlParse(db *sqlx.DB) ([]schema.Table, error) {
 	tableNames, tableNamesErr := getMysqlTables(db)
 	if tableNamesErr != nil {
@@ -54,7 +55,7 @@ func MysqlParse(db *sqlx.DB) ([]schema.Table, error) {
 
 func getMysqlTables(db *sqlx.DB) ([]string, error) {
 	tableNames := make([]string, 0)
-	selectErr := db.Select(&tableNames, getMysqlTablesSql)
+	selectErr := db.Select(&tableNames, getMysqlTablesSQL)
 
 	return tableNames, selectErr
 }
@@ -70,7 +71,7 @@ func getMysqlColumns(db *sqlx.DB, tableName string) ([]string, error) {
 	}
 
 	reqResult := make([]mysqlColumns, 0)
-	selectErr := db.Select(&reqResult, fmt.Sprintf(getMysqlColumnsSql, tableName))
+	selectErr := db.Select(&reqResult, fmt.Sprintf(getMysqlColumnsSQL, tableName))
 	result := make([]string, 0, len(reqResult))
 	for _, r := range reqResult {
 		result = append(result, r.Field)
