@@ -128,16 +128,13 @@ func NewDatabasesSchemaNotation(mainConf string) (*Databases, error) {
 				if tableFileReadErr != nil {
 					return tableFileReadErr
 				}
-				type t struct {
-					Tables []Table `json:"tables" yaml:"tables"`
-				}
 
-				tbl := &t{}
-				tableUnmarshalErr := yaml.Unmarshal(tableData, tbl)
+				fileTables := make([]Table, 0, 0)
+				tableUnmarshalErr := yaml.Unmarshal(tableData, &fileTables)
 				if tableUnmarshalErr != nil {
 					return tableUnmarshalErr
 				}
-				d.Tables = append(d.Tables, tbl.Tables...)
+				d.Tables = append(d.Tables, fileTables...)
 
 				return nil
 			})
