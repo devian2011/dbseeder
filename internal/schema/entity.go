@@ -113,11 +113,11 @@ func NewDatabasesSchemaNotation(mainConf string) (*Databases, error) {
 		return nil, unmarshalErr
 	}
 
-	for id, d := range cfg.Databases {
-		if d.TablesPath != "" {
-			d.TablesPath = strings.ReplaceAll(d.TablesPath, "$PWD", filepath.Dir(mainConf))
+	for id, databaseCfg := range cfg.Databases {
+		if databaseCfg.TablesPath != "" {
+			databaseCfg.TablesPath = strings.ReplaceAll(databaseCfg.TablesPath, "$PWD", filepath.Dir(mainConf))
 
-			walkErr := filepath.Walk(d.TablesPath, func(path string, info fs.FileInfo, err error) error {
+			walkErr := filepath.Walk(databaseCfg.TablesPath, func(path string, info fs.FileInfo, err error) error {
 				if err != nil {
 					return err
 				}
@@ -134,14 +134,14 @@ func NewDatabasesSchemaNotation(mainConf string) (*Databases, error) {
 				if tableUnmarshalErr != nil {
 					return tableUnmarshalErr
 				}
-				d.Tables = append(d.Tables, fileTables...)
+				databaseCfg.Tables = append(databaseCfg.Tables, fileTables...)
 
 				return nil
 			})
 			if walkErr != nil {
 				return nil, walkErr
 			}
-			cfg.Databases[id] = d
+			cfg.Databases[id] = databaseCfg
 		}
 	}
 
