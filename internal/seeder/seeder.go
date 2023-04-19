@@ -20,10 +20,7 @@ type Seeder struct {
 }
 
 func NewSeeder(sch *schema.Schema, plugins *modifiers.ModifierStore) (*Seeder, error) {
-	relValues := &RelationValues{
-		Tables: make(map[string][]map[string]any, 0),
-	}
-
+	relValues := NewRelationValues()
 	db, err := NewDb(sch.Databases.Databases)
 	if err != nil {
 		return nil, err
@@ -50,7 +47,7 @@ func (seeder *Seeder) Run() error {
 }
 
 func (seeder *Seeder) walkingFn(code string, node *schema.TableDependenceNode) error {
-	if seeder.relValues.isTableGenerated(code) {
+	if seeder.relValues.IsTableDataGenerated(code) {
 		return nil
 	}
 	/// If table has dependencies - truncate it

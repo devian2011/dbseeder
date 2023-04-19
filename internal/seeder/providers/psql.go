@@ -54,7 +54,7 @@ func (p *PsqlProvider) GetAll(tableName string) ([]map[string]any, error) {
 }
 
 func (p *PsqlProvider) Truncate(tableName string) error {
-	return p.tx.QueryRowx(fmt.Sprintf("TRUNCATE TABLE %s CASCADE", tableName)).Err()
+	return p.tx.QueryRowx("TRUNCATE TABLE " + tableName).Err()
 }
 
 func (p *PsqlProvider) Insert(tableName string, columns []string, values []any) error {

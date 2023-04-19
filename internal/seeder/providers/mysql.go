@@ -1,8 +1,6 @@
 package providers
 
 import (
-	"fmt"
-
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 )
@@ -36,7 +34,7 @@ func NewMysqlProvider(dsn string) (*MysqlProvider, error) {
 
 func (m *MysqlProvider) GetAll(tableName string) ([]map[string]any, error) {
 	result := make([]map[string]any, 0)
-	rows, err := m.tx.Queryx(fmt.Sprintf("SELECT * FROM %s", tableName))
+	rows, err := m.tx.Queryx("SELECT * FROM " + tableName)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +52,7 @@ func (m *MysqlProvider) GetAll(tableName string) ([]map[string]any, error) {
 }
 
 func (m *MysqlProvider) Truncate(tableName string) error {
-	return m.tx.QueryRowx(fmt.Sprintf("TRUNCATE TABLE %s CASCADE", tableName)).Err()
+	return m.tx.QueryRowx("TRUNCATE TABLE " + tableName).Err()
 }
 
 func (m *MysqlProvider) Insert(tableName string, columns []string, values []any) error {
