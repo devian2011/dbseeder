@@ -7,6 +7,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type DbProvider interface {
+	GetAll(tableName string) ([]map[string]any, error)
+	Truncate(tableName string) error
+	Insert(tableName string, columns []string, values []any) error
+	Commit() error
+	Rollback() error
+}
+
 type dbConnPool struct {
 	connections map[string]DbProvider
 }
