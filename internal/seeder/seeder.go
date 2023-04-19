@@ -1,19 +1,28 @@
 package seeder
 
 import (
+	"dbseeder/internal/seeder/providers"
+	"errors"
+	"fmt"
+
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/sirupsen/logrus"
+
 	"dbseeder/internal/modifiers"
 	"dbseeder/internal/schema"
 	"dbseeder/internal/seeder/generators/dependence"
 	"dbseeder/internal/seeder/generators/fake"
 	"dbseeder/internal/seeder/generators/list"
 	"dbseeder/pkg/helper"
-	"errors"
-	"fmt"
-	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/jmoiron/sqlx"
-	"github.com/sirupsen/logrus"
 )
+
+type DbProvider interface {
+	GetAll(tableName string) ([]map[string]any, error)
+	Truncate(tableName string) error
+	Insert(tableName string, columns []string, values []any) error
+	Commit() error
+	Rollback() error
+}
 
 type RelationValues struct {
 	//TODO: Optimize store values
@@ -39,14 +48,12 @@ func (t *RelationValues) isTableGenerated(tableCode string) bool {
 }
 
 type connectionPool struct {
-	connections map[string]*sqlx.DB
-	trxs        map[string]*sqlx.Tx
+	connections map[string]DbProvider
 }
 
 func newConnectionPool() *connectionPool {
 	return &connectionPool{
-		connections: make(map[string]*sqlx.DB),
-		trxs:        make(map[string]*sqlx.Tx),
+		connections: make(map[string]DbProvider, 1),
 	}
 }
 
@@ -55,35 +62,20 @@ func (pool *connectionPool) initConnection(code, driver, dsn string) error {
 	if _, exists := pool.connections[code]; exists {
 		return fmt.Errorf("database with code name: %s already exists", code)
 	}
-	pool.connections[code], err = sqlx.Open(driver, dsn)
-	if err != nil {
-		return fmt.Errorf("open connection for %s has error: %s", code, err.Error())
+	switch driver {
+	case "pgx":
+		pool.connections[code], err = providers.NewPsqlProvider(dsn)
+		return err
+	case "mysql":
+		pool.connections[code], err = providers.NewMysqlProvider(dsn)
+		return err
+	default:
+		return fmt.Errorf("unsupported database driver: %s for code: %s", driver, code)
 	}
-	if err = pool.connections[code].Ping(); err != nil {
-		return fmt.Errorf("error ping for %s error: %s", code, err.Error())
-	}
-	pool.connections[code].SetMaxOpenConns(10)
-	pool.connections[code].SetMaxIdleConns(10)
-	return nil
 }
 
-func (pool *connectionPool) startTransactions() error {
-	var initTxErr error
-	for code, conn := range pool.connections {
-		pool.trxs[code], initTxErr = conn.Beginx()
-		if initTxErr != nil {
-			logrus.Errorf("Error on start transaction for %s. Err: %s", code, initTxErr)
-			pool.rollbackTransactions()
-			return initTxErr
-		}
-		logrus.Infof("Start transaction for %s", code)
-	}
-
-	return nil
-}
-
-func (pool *connectionPool) getTransactionForDb(db string) (*sqlx.Tx, error) {
-	if trx, exists := pool.trxs[db]; exists {
+func (pool *connectionPool) getConnection(db string) (DbProvider, error) {
+	if trx, exists := pool.connections[db]; exists {
 		return trx, nil
 	}
 
@@ -91,22 +83,16 @@ func (pool *connectionPool) getTransactionForDb(db string) (*sqlx.Tx, error) {
 }
 
 func (pool *connectionPool) commitTransactions() {
-	for code, trx := range pool.trxs {
-		trx.Commit()
+	for code, conn := range pool.connections {
+		conn.Commit()
 		logrus.Infof("Transaction for %s has been commited", code)
 	}
 }
 
 func (pool *connectionPool) rollbackTransactions() {
-	for code, trx := range pool.trxs {
-		trx.Rollback()
+	for code, conn := range pool.connections {
+		conn.Rollback()
 		logrus.Infof("Transaction for %s has been rollbacked", code)
-	}
-}
-
-func (pool *connectionPool) closeConnections() {
-	for _, c := range pool.connections {
-		c.Close()
 	}
 }
 
@@ -145,11 +131,9 @@ func (seeder *Seeder) Run() error {
 	if initConnectionErr != nil {
 		return initConnectionErr
 	}
-	defer seeder.connPool.closeConnections()
+	// Rollback transactions and close connection
+	defer seeder.connPool.rollbackTransactions()
 
-	if startTrxsError := seeder.connPool.startTransactions(); startTrxsError != nil {
-		seeder.connPool.rollbackTransactions()
-	}
 	err := seeder.schema.Tree.Walk(seeder.walkingFn)
 
 	if err != nil {
@@ -378,52 +362,35 @@ func (generator *tableData) generateFieldData(fieldName string, rowValues map[st
 	}
 }
 
-// TODO: Create db connection wrapper for use right requests for each database type
 // Db functions
 func (seeder *Seeder) loadDataFromDb(code string, node *schema.TableDependenceNode) error {
 	if node.HasDependents() {
-		conn, err := seeder.connPool.getTransactionForDb(node.DbName)
+		conn, err := seeder.connPool.getConnection(node.DbName)
 		if err != nil {
 			return err
 		}
 
-		result := make([]map[string]any, 0)
-		rows, err := conn.Queryx(fmt.Sprintf("SELECT * FROM %s", node.Table.Name))
-		defer rows.Close()
+		result, err := conn.GetAll(node.Table.Name)
 		if err != nil {
-			return fmt.Errorf(
-				"error for get values from table: %s. Error: %s",
-				code,
-				err.Error())
+			return nil
 		}
-		for rows.Next() {
-			val := make(map[string]any, 0)
-			scanErr := rows.MapScan(val)
-			if scanErr != nil {
-				return scanErr
-			}
-			result = append(result, val)
-		}
-
 		seeder.relValues.Add(code, result)
 	}
 	return nil
 }
 
 func (seeder *Seeder) insert(db string, tableName string, columns []string, values []any) error {
-	conn, err := seeder.connPool.getTransactionForDb(db)
+	conn, err := seeder.connPool.getConnection(db)
 	if err != nil {
 		return err
 	}
-	rowsCountForInsert := len(values) / len(columns)
-	sql := conn.Rebind(generateInsertSQL(tableName, columns, rowsCountForInsert))
-	return conn.QueryRowx(sql, values...).Err()
+	return conn.Insert(tableName, columns, values)
 }
 
 func (seeder *Seeder) truncate(db, tableName string) error {
-	conn, err := seeder.connPool.getTransactionForDb(db)
+	conn, err := seeder.connPool.getConnection(db)
 	if err != nil {
 		return err
 	}
-	return conn.QueryRowx(fmt.Sprintf("TRUNCATE TABLE %s", tableName)).Err()
+	return conn.Truncate(tableName)
 }
