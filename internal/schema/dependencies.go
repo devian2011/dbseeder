@@ -28,7 +28,7 @@ func (tree *TableDependenceTree) GetNode(dbName, tableName string) *TableDepende
 
 type TableDependenceNode struct {
 	Dependencies []*TableDependenceNode
-	ColumnOrder  []string
+	ColumnOrder  []string // Order for fill table data, it's important for use expressions in rows
 	Table        *Table
 	DbName       string
 	Code         string

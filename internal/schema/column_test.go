@@ -6,7 +6,7 @@ import (
 )
 
 func TestGetOrderColumns(t *testing.T) {
-	fields := map[string]*Field{
+	fields := map[string]Field{
 		"fullname": {
 			Type:       "",
 			Generation: "",
