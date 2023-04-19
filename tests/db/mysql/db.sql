@@ -11,22 +11,26 @@ CREATE TABLE IF NOT EXISTS users (
     fullname varchar(255) not null,
     password varchar(255) not null,
     last_online timestamp default NOW(),
-    area_id bigint not null
+    area_id bigint not null,
+    FOREIGN KEY user_areas_fk REFERENCES areas(id)
 );
 
 CREATE TABLE IF NOT EXISTS roles (
     id int not null primary key auto_increment,
-    name varchar(255) not null
+    name varchar(255) not null,
 );
 
 CREATE TABLE IF NOT EXISTS user_in_roles (
     user_id bigint not null,
-    role_id bigint not null
+    role_id bigint not null,
+    FOREIGN KEY user_role_user_id_fk REFERENCES user_in_roles(user_id),
+    FOREIGN KEY user_role_role_id_fk REFERENCES user_in_roles(role_id)
 );
 
 CREATE TABLE IF NOT EXISTS info (
     id int not null primary key auto_increment,
     phone varchar(255) not null,
     address varchar(1024) not null,
-    user_id bigint not null
+    user_id bigint not null,
+    FOREIGN KEY user_info_fk REFERENCES users(id)
 );
