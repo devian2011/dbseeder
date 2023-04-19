@@ -188,6 +188,10 @@ func (generator *tableGenerator) generateRow(rowNumber int) ([]any, error) {
 	for _, fieldName := range generator.node.ColumnOrder {
 		if len(generator.node.Table.Fill) > rowNumber {
 			if v, exists := generator.node.Table.Fill[rowNumber][fieldName]; exists {
+				v, err := generator.plugins.ApplyList(generator.node.Table.Fields[fieldName].Plugins, v)
+				if err != nil {
+					return nil, err
+				}
 				values = append(values, v)
 				rowValues[fieldName] = v
 				continue
