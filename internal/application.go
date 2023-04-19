@@ -110,7 +110,10 @@ func (a *Application) help() error {
 }
 
 func (a *Application) seed() error {
-	sdr := seeder.NewSeeder(a.schema, a.modifiers)
+	sdr, err := seeder.NewSeeder(a.schema, a.modifiers)
+	if err != nil {
+		return err
+	}
 
 	return sdr.Run()
 }

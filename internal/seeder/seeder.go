@@ -1,12 +1,8 @@
 package seeder
 
 import (
-	"dbseeder/internal/seeder/providers"
 	"errors"
 	"fmt"
-
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/sirupsen/logrus"
 
 	"dbseeder/internal/modifiers"
 	"dbseeder/internal/schema"
@@ -47,99 +43,38 @@ func (t *RelationValues) isTableGenerated(tableCode string) bool {
 	return false
 }
 
-type connectionPool struct {
-	connections map[string]DbProvider
-}
-
-func newConnectionPool() *connectionPool {
-	return &connectionPool{
-		connections: make(map[string]DbProvider, 1),
-	}
-}
-
-func (pool *connectionPool) initConnection(code, driver, dsn string) error {
-	var err error
-	if _, exists := pool.connections[code]; exists {
-		return fmt.Errorf("database with code name: %s already exists", code)
-	}
-	switch driver {
-	case "pgx":
-		pool.connections[code], err = providers.NewPsqlProvider(dsn)
-		return err
-	case "mysql":
-		pool.connections[code], err = providers.NewMysqlProvider(dsn)
-		return err
-	default:
-		return fmt.Errorf("unsupported database driver: %s for code: %s", driver, code)
-	}
-}
-
-func (pool *connectionPool) getConnection(db string) (DbProvider, error) {
-	if trx, exists := pool.connections[db]; exists {
-		return trx, nil
-	}
-
-	return nil, fmt.Errorf("unknown transaction for db: %s", db)
-}
-
-func (pool *connectionPool) commitTransactions() {
-	for code, conn := range pool.connections {
-		conn.Commit()
-		logrus.Infof("Transaction for %s has been commited", code)
-	}
-}
-
-func (pool *connectionPool) rollbackTransactions() {
-	for code, conn := range pool.connections {
-		conn.Rollback()
-		logrus.Infof("Transaction for %s has been rollbacked", code)
-	}
-}
-
 type Seeder struct {
-	connPool       *connectionPool
+	db             *Db
 	schema         *schema.Schema
 	relValues      *RelationValues
 	tableGenerator *TableGenerator
 }
 
-func NewSeeder(sch *schema.Schema, plugins *modifiers.ModifierStore) *Seeder {
+func NewSeeder(sch *schema.Schema, plugins *modifiers.ModifierStore) (*Seeder, error) {
 	relValues := &RelationValues{
 		Tables: make(map[string][]map[string]any, 0),
 	}
+
+	db, err := NewDb(sch.Databases.Databases)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Seeder{
-		connPool:       newConnectionPool(),
+		db:             db,
 		schema:         sch,
 		tableGenerator: &TableGenerator{relationValues: relValues, plugins: plugins},
 		relValues:      relValues,
-	}
-}
-
-func (seeder *Seeder) initConnections() error {
-	for _, d := range seeder.schema.Databases.Databases {
-		err := seeder.connPool.initConnection(d.Name, d.Driver, d.DSN)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	}, nil
 }
 
 func (seeder *Seeder) Run() error {
-	initConnectionErr := seeder.initConnections()
-	if initConnectionErr != nil {
-		return initConnectionErr
-	}
-	// Rollback transactions and close connection
-	defer seeder.connPool.rollbackTransactions()
-
 	err := seeder.schema.Tree.Walk(seeder.walkingFn)
 
 	if err != nil {
-		seeder.connPool.rollbackTransactions()
+		seeder.db.pool.rollback()
 	} else {
-		seeder.connPool.commitTransactions()
+		seeder.db.pool.commit()
 	}
 
 	return err
@@ -151,7 +86,7 @@ func (seeder *Seeder) walkingFn(code string, node *schema.TableDependenceNode) e
 	}
 	/// If table has dependencies - truncate it
 	if len(node.Dependencies) > 0 && node.Table.Action == schema.ActionGenerate {
-		truncateErr := seeder.truncate(node.DbName, node.Table.Name)
+		truncateErr := seeder.db.truncate(node.DbName, node.Table.Name)
 		if truncateErr != nil {
 			return truncateErr
 		}
@@ -171,14 +106,29 @@ func (seeder *Seeder) walkingFn(code string, node *schema.TableDependenceNode) e
 			return tableGenErr
 		}
 
-		insertErr := seeder.insert(node.DbName, node.Table.Name, td.columns, td.values)
+		insertErr := seeder.db.insert(node.DbName, node.Table.Name, td.columns, td.values)
 		if insertErr != nil {
 			return insertErr
 		}
-		/// Mysql and Postgres have different ways for get ids, that's why simple way is select all generated data
-		return seeder.loadDataFromDb(code, node)
+
+		if node.HasDependents() {
+			result, err := seeder.db.loadDataFromDb(code, node.Table.Name)
+			if err == nil {
+				seeder.relValues.Add(code, result)
+			}
+			return err
+		}
+		return nil
+
 	case schema.ActionGet:
-		return seeder.loadDataFromDb(code, node)
+		if node.HasDependents() {
+			result, err := seeder.db.loadDataFromDb(code, node.Table.Name)
+			if err == nil {
+				seeder.relValues.Add(code, result)
+			}
+			return err
+		}
+		return nil
 	default:
 		return fmt.Errorf("unknown action for table: %s", code)
 	}
@@ -360,37 +310,4 @@ func (generator *tableData) generateFieldData(fieldName string, rowValues map[st
 	default:
 		return nil, fmt.Errorf("unknown field generation type for %s", fieldName)
 	}
-}
-
-// Db functions
-func (seeder *Seeder) loadDataFromDb(code string, node *schema.TableDependenceNode) error {
-	if node.HasDependents() {
-		conn, err := seeder.connPool.getConnection(node.DbName)
-		if err != nil {
-			return err
-		}
-
-		result, err := conn.GetAll(node.Table.Name)
-		if err != nil {
-			return nil
-		}
-		seeder.relValues.Add(code, result)
-	}
-	return nil
-}
-
-func (seeder *Seeder) insert(db string, tableName string, columns []string, values []any) error {
-	conn, err := seeder.connPool.getConnection(db)
-	if err != nil {
-		return err
-	}
-	return conn.Insert(tableName, columns, values)
-}
-
-func (seeder *Seeder) truncate(db, tableName string) error {
-	conn, err := seeder.connPool.getConnection(db)
-	if err != nil {
-		return err
-	}
-	return conn.Truncate(tableName)
 }
