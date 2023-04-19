@@ -91,6 +91,10 @@ type ForeignDependence struct {
 	Type  ForeignKeyType `json:"type" yaml:"type,omitempty"`
 }
 
+func (fd *ForeignDependence) GetTableCode() string {
+	return TableCode(fd.Db, fd.Table)
+}
+
 type ExpressionDependence struct {
 	Expression string   `yaml:"expression" json:"expression,omitempty"`
 	Rows       []string `json:"rows" yaml:"rows,omitempty"`

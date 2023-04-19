@@ -15,8 +15,8 @@ func NewTree() *TableDependenceTree {
 	}
 }
 
-func (tree *TableDependenceTree) GetNode(dbName string, tableName string) *TableDependenceNode {
-	code := fmt.Sprintf("%s.%s", dbName, tableName)
+func (tree *TableDependenceTree) GetNode(dbName, tableName string) *TableDependenceNode {
+	code := TableCode(dbName, tableName)
 	if _, exists := tree.tableMap[code]; !exists {
 		tree.tableMap[code] = &TableDependenceNode{
 			Dependencies: make([]*TableDependenceNode, 0),
@@ -36,6 +36,10 @@ type TableDependenceNode struct {
 	DbName       string
 	Code         string
 	Dependents   int
+}
+
+func (node *TableDependenceNode) GetDependenceTableCode() string {
+	return fmt.Sprintf(node.DbName, node.Table.Name)
 }
 
 func (node *TableDependenceNode) addTableNotation(table *Table) {

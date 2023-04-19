@@ -15,7 +15,7 @@ import (
 type Seeder struct {
 	db             *Db
 	schema         *schema.Schema
-	relValues      *RelationValues
+	relValues      *RelationStore
 	tableGenerator *TableGenerator
 }
 
@@ -101,7 +101,7 @@ func (seeder *Seeder) walkingFn(code string, node *schema.TableDependenceNode) e
 }
 
 type TableGenerator struct {
-	relationValues *RelationValues
+	relationValues *RelationStore
 	plugins        *modifiers.ModifierStore
 }
 
@@ -111,7 +111,7 @@ type tableData struct {
 	values         []any
 	rowsHashes     map[string]bool
 	relations      map[string]map[int]bool
-	relationValues *RelationValues
+	relationValues *RelationStore
 	node           *schema.TableDependenceNode
 	plugins        *modifiers.ModifierStore
 }
@@ -160,7 +160,7 @@ func (generator *TableGenerator) getColumns(node *schema.TableDependenceNode) ([
 	return columns.cols, nil
 }
 
-func (generator *TableGenerator) initTableData(code string, node *schema.TableDependenceNode, relValues *RelationValues) (*tableData, error) {
+func (generator *TableGenerator) initTableData(code string, node *schema.TableDependenceNode, relValues *RelationStore) (*tableData, error) {
 	/// Found length for generated values
 	rowsCount := node.Table.GetRowsCount()
 	if rowsCount == 0 {

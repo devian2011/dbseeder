@@ -12,10 +12,7 @@ type GeneratedValues interface {
 }
 
 func GenerateForeign(fieldVal schema.Field, genValues GeneratedValues, relations map[string]map[int]bool) (any, error) {
-	generatedVls, findErr := genValues.Get(
-		fmt.Sprintf("%s.%s",
-			fieldVal.Depends.ForeignKey.Db,
-			fieldVal.Depends.ForeignKey.Table))
+	generatedVls, findErr := genValues.Get(fieldVal.Depends.ForeignKey.GetTableCode())
 	if findErr != nil {
 		return nil, findErr
 	}
@@ -27,7 +24,6 @@ func GenerateForeign(fieldVal schema.Field, genValues GeneratedValues, relations
 			relations[fieldVal.Depends.ForeignKey.Field][rIndex] = true
 		} else {
 			// Find biggest index from relation map
-			/// TODO: Try to optimize algo
 			for k := range relations[fieldVal.Depends.ForeignKey.Field] {
 				if rIndex < k {
 					rIndex = k

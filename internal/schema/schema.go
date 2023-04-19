@@ -4,6 +4,10 @@ import (
 	"fmt"
 )
 
+func TableCode(dbName, tableName string) string {
+	return fmt.Sprintf("%s.%s.", dbName, tableName)
+}
+
 type Schema struct {
 	Databases *Databases
 	Tree      *TableDependenceTree
