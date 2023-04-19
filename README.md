@@ -84,109 +84,109 @@ databases: # Main section. It contains list of databases which we need to seed
 
 ```yaml
 - name: info # Table name
-count: 10 # Count of rows for fill
-action: generate # One of available actions for table (generate or get). 'Generate' - for fill fake data and 'get' for get data from db 
-fields: # List of columns
-  id: # Table name
-    type: int # Column type
-    generation: db # Generation db - (this key we set for auto_generated data like a serial in postgres or auto_increment in MySQL)
-  phone:
-    type: phone # Faker data type, generates random phone number
-    generation: faker # Set generator for column (db, faker, list, depends)
-  address:
-    type: address
-    generation: faker
-  user_id:
-    type: int
-    generation: depends # This generation type for mark that this column depends on other table or other columns
-    depends: # Dependence section. (It may depends from other table in same db, or other db, also it may depends from other columns)
-      foreign: # Notation from 
-        db: main
-        table: users
-        field: id
-        type: oneToOne # Relation type - oneToOne or manyToOne
-  - name: users
-count: 10
-action: generate
-fields:
-  id:
-    type: int
-    generation: db
-  username:
-    type: string
-    generation: faker
-  lastname:
-    type: lastName
-    generation: faker
-  firstname:
-    type: firstName
-    generation: faker
-  fullname:
-    type: string
-    generation: depends
-    depends:
-      expression:
-        expression: "row.lastname + ' ' + row.firstname" # Dependence columns supports expressions for generate data.
-        rows: # List of dependence columns in same row
-          - lastname
-          - firstname
-  password:
-    type: string
-    generation: faker
-    plugins:
-      - bcrypt
-  last_online:
-    type: "date 2022-01-01"
-    generation: faker
-  area_id:
-    type: int
-    generation: depends
-    depends:
-      foreign:
-        db: main
-        table: areas
-        field: id
-        type: manyToOne
-fill:
-  - username: admin
-    password: admin
-  - name: roles
-count: 2
-action: generate
-fields:
-  id:
-    type: int
-    generation: db
-  name:
-    type: string
-    generation: list
-    list:
-      - ROLE_ADMIN
-      - ROLE_USER
-fill:
-  - name: ROLE_ADMIN
-  - name: ROLE_USER
-  - name: user_in_roles
-count: 10
-action: generate
-noDuplicates: true
-fields:
-  user_id:
-    type: int
-    generation: depends
-    depends:
-      foreign:
-        db: main
-        table: users
-        field: id
-        type: manyToOne
-  role_id:
-    type: int
-    generation: depends
-    depends:
-      foreign:
-        db: main
-        table: roles
-        field: id
-        type: manyToOne
+  count: 10 # Count of rows for fill
+  action: generate # One of available actions for table (generate or get). 'Generate' - for fill fake data and 'get' for get data from db 
+  fields: # List of columns
+    id: # Table name
+      type: int # Column type
+      generation: db # Generation db - (this key we set for auto_generated data like a serial in postgres or auto_increment in MySQL)
+      phone:
+        type: phone # Faker data type, generates random phone number
+        generation: faker # Set generator for column (db, faker, list, depends)
+      address:
+        type: address
+        generation: faker
+      user_id:
+        type: int
+        generation: depends # This generation type for mark that this column depends on other table or other columns
+        depends: # Dependence section. (It may depends from other table in same db, or other db, also it may depends from other columns)
+          foreign: # Notation from 
+            db: main
+            table: users
+            field: id
+            type: oneToOne # Relation type - oneToOne or manyToOne
+- name: users
+  count: 10
+  action: generate
+  fields:
+    id:
+      type: int
+      generation: db
+    username:
+      type: string
+      generation: faker
+    lastname:
+      type: lastName
+      generation: faker
+    firstname:
+      type: firstName
+      generation: faker
+    fullname:
+      type: string
+      generation: depends
+      depends:
+        expression:
+          expression: "row.lastname + ' ' + row.firstname" # Dependence columns supports expressions for generate data.
+          rows: # List of dependence columns in same row
+            - lastname
+            - firstname
+    password:
+      type: string
+      generation: faker
+      plugins:
+        - bcrypt
+    last_online:
+      type: "date 2022-01-01"
+      generation: faker
+    area_id:
+      type: int
+      generation: depends
+      depends:
+        foreign:
+          db: main
+          table: areas
+          field: id
+          type: manyToOne
+  fill:
+    - username: admin
+      password: admin
+- name: roles
+  count: 2
+  action: generate
+  fields:
+    id:
+      type: int
+      generation: db
+    name:
+      type: string
+      generation: list
+      list:
+        - ROLE_ADMIN
+        - ROLE_USER
+  fill:
+    - name: ROLE_ADMIN
+    - name: ROLE_USER
+- name: user_in_roles
+  count: 10
+  action: generate
+  noDuplicates: true
+  fields:
+    user_id:
+      type: int
+      generation: depends
+      depends:
+        foreign:
+          db: main
+          table: users
+          field: id
+          type: manyToOne
+    role_id:
+      type: int
+      generation: depends
+      depends:
+        foreign:
+          db: main
+          table: roles
+          field: id
+          type: manyToOne
 ```
