@@ -1,9 +1,5 @@
 package schema
 
-import (
-	"fmt"
-)
-
 type TableDependenceTree struct {
 	root     *TableDependenceNode
 	tableMap map[string]*TableDependenceNode
@@ -32,14 +28,11 @@ func (tree *TableDependenceTree) GetNode(dbName, tableName string) *TableDepende
 
 type TableDependenceNode struct {
 	Dependencies []*TableDependenceNode
+	ColumnOrder  []string
 	Table        *Table
 	DbName       string
 	Code         string
 	Dependents   int
-}
-
-func (node *TableDependenceNode) GetDependenceTableCode() string {
-	return fmt.Sprintf(node.DbName, node.Table.Name)
 }
 
 func (node *TableDependenceNode) addTableNotation(table *Table) {
@@ -62,12 +55,20 @@ func (node *TableDependenceNode) HasDependents() bool {
 	return node.Dependents != 0
 }
 
-func BuildDependenciesTree(dbs *Databases) *TableDependenceTree {
+func BuildDependenciesTree(dbs *Databases) (*TableDependenceTree, error) {
 	tree := NewTree()
 	for _, database := range dbs.Databases {
 		for k, table := range database.Tables {
 			node := tree.GetNode(database.Name, table.Name)
 			node.addTableNotation(&database.Tables[k])
+
+			var err error
+			srt := columnSorter{fields: table.Fields}
+			node.ColumnOrder, err = srt.sort()
+			if err != nil {
+				return nil, err
+			}
+
 			for _, field := range table.Fields {
 				// Set foreign key dependence
 				if field.IsFkDependence() {
@@ -79,7 +80,7 @@ func BuildDependenciesTree(dbs *Databases) *TableDependenceTree {
 		}
 	}
 
-	return tree
+	return tree, nil
 }
 
 type TreeWalkFunc func(code string, node *TableDependenceNode) error

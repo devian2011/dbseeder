@@ -13,13 +13,18 @@ type Schema struct {
 	Tree      *TableDependenceTree
 }
 
-func NewSchema(dbs *Databases) *Schema {
-	sh := &Schema{
-		Databases: dbs,
-		Tree:      BuildDependenciesTree(dbs),
+func NewSchema(dbs *Databases) (*Schema, error) {
+	tree, err := BuildDependenciesTree(dbs)
+	if err != nil {
+		return nil, err
 	}
 
-	return sh
+	sh := &Schema{
+		Databases: dbs,
+		Tree:      tree,
+	}
+
+	return sh, nil
 }
 
 func (schema Schema) Check() error {

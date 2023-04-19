@@ -39,9 +39,14 @@ func NewApplication(ctx context.Context, dbConfFilePath string) (*Application, e
 		return nil, parseSchemeErr
 	}
 
+	sch, bSchemaErr := schema.NewSchema(notation)
+	if bSchemaErr != nil {
+		return nil, bSchemaErr
+	}
+
 	app := &Application{
 		ctx:        ctx,
-		schema:     schema.NewSchema(notation),
+		schema:     sch,
 		commandMap: nil,
 		modifiers:  modifiers.NewModifierStore(),
 	}
