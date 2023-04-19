@@ -40,6 +40,7 @@ help - Show all commands
 | country->code   | Country code                                          |
 | ipv6            | IPv6 address                                          |
 | date            | Date field. Y-m-d format (date 2022-01-01 2023-01-01) |
+| address->full   | Full address field (zip, city, street)                |
 | address->street | Address street                                        |
 | country         | Country                                               |
 | lastName        | Field last name                                       |
@@ -62,7 +63,7 @@ help - Show all commands
 ### Databases section
 
 !!!Attention!!!
-Currently seeder supports only MySQL and PostgresSQL databases.  
+Currently seeder supports only MySQL and PostgresSQL databases.
 
 ```yaml
 databases: # Main section. It contains list of databases which we need to seed
@@ -104,7 +105,7 @@ fields: # List of columns
         table: users
         field: id
         type: oneToOne # Relation type - oneToOne or manyToOne
-- name: users
+  - name: users
 count: 10
 action: generate
 fields:
@@ -149,7 +150,7 @@ fields:
 fill:
   - username: admin
     password: admin
-- name: roles
+  - name: roles
 count: 2
 action: generate
 fields:
@@ -165,7 +166,7 @@ fields:
 fill:
   - name: ROLE_ADMIN
   - name: ROLE_USER
-- name: user_in_roles
+  - name: user_in_roles
 count: 10
 action: generate
 noDuplicates: true

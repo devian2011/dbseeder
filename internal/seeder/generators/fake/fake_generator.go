@@ -24,6 +24,7 @@ const (
 	fieldIpv6           FieldType = "ipv6"
 	fieldDate           FieldType = "date"
 	fieldText           FieldType = "text"
+	fieldFullAddress    FieldType = "address->full"
 	fieldAddress        FieldType = "address"
 	fieldAddressZipCode FieldType = "address->zip"
 	fieldAddressCity    FieldType = "address->city"
@@ -54,7 +55,8 @@ var FieldTypesMap = map[FieldType]string{
 	fieldIpv6:           "IPv6 address",
 	fieldDate:           "Date field. Y-m-d format",
 	fieldText:           "Random text field like 'Lorem Ipsam'",
-	fieldAddress:        "Full address field",
+	fieldFullAddress:    "Full address field",
+	fieldAddress:        "Full street address field",
 	fieldAddressZipCode: "Address zipcode",
 	fieldAddressCity:    "Address city",
 	fieldAddressStreet:  "Address street",
@@ -160,6 +162,8 @@ func Generate(fieldName string, fieldVal schema.Field) (any, error) {
 		return faker.Date().Between(begin, end), nil
 	case fieldMoney:
 		return faker.Commerce().Price(), nil
+	case fieldFullAddress:
+		return faker.Address().String(), nil
 	case fieldAddress:
 		return faker.Address().StreetAddress(), nil
 	case fieldCountry:
