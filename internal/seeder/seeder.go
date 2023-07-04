@@ -95,7 +95,7 @@ func (seeder *Seeder) walkingFn(code string, node *schema.TableDependenceNode) e
 		}
 
 		if node.HasDependents() {
-			result, err := seeder.db.loadDataFromDb(code, node.Table.Name)
+			result, err := seeder.db.loadDataFromDb(node.DbName, node.Table.Name)
 			if err == nil {
 				seeder.relValues.Add(code, result)
 			}
@@ -105,7 +105,7 @@ func (seeder *Seeder) walkingFn(code string, node *schema.TableDependenceNode) e
 
 	case schema.ActionGet:
 		if node.HasDependents() {
-			result, err := seeder.db.loadDataFromDb(code, node.Table.Name)
+			result, err := seeder.db.loadDataFromDb(node.DbName, node.Table.Name)
 			if err == nil {
 				seeder.relValues.Add(code, result)
 			}

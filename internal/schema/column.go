@@ -12,6 +12,9 @@ type columnSorter struct {
 func (o *columnSorter) sort() ([]string, error) {
 	result := make([]string, 0, len(o.fields))
 	for fieldName := range o.fields {
+		if o.fields[fieldName].Generation == GenerationTypeDb {
+			continue
+		}
 		err := o.depChainSort(&result, fieldName)
 		if err != nil {
 			return nil, err
@@ -23,6 +26,9 @@ func (o *columnSorter) sort() ([]string, error) {
 
 func (o *columnSorter) depChainSort(sorted *[]string, fieldName string) error {
 	if fieldVal, exists := o.fields[fieldName]; exists {
+		if fieldVal.Generation == GenerationTypeDb {
+			return nil
+		}
 		if len(fieldVal.Depends.Expression.Rows) > 0 {
 			for _, depRowField := range fieldVal.Depends.Expression.Rows {
 				err := o.depChainSort(sorted, depRowField)

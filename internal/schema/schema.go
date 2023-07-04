@@ -5,7 +5,7 @@ import (
 )
 
 func TableCode(dbName, tableName string) string {
-	return fmt.Sprintf("%s.%s.", dbName, tableName)
+	return fmt.Sprintf("%s.%s", dbName, tableName)
 }
 
 type Schema struct {

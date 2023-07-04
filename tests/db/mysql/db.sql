@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS roles (
     id int not null primary key auto_increment,
-    name varchar(255) not null,
+    name varchar(255) not null
 );
 
 CREATE TABLE IF NOT EXISTS user_in_roles (
