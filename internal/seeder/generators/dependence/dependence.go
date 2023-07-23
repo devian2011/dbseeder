@@ -1,10 +1,12 @@
 package dependence
 
 import (
-	"dbseeder/internal/schema"
 	"fmt"
-	"github.com/antonmedv/expr"
 	"math/rand"
+
+	"github.com/antonmedv/expr"
+
+	"dbseeder/internal/schema"
 )
 
 type GeneratedValues interface {

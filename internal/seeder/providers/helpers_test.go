@@ -1,8 +1,9 @@
 package providers
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCreatePlaceholderString(t *testing.T) {

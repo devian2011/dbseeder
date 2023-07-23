@@ -1,10 +1,12 @@
 package seeder
 
 import (
+	"fmt"
+
+	"github.com/sirupsen/logrus"
+
 	"dbseeder/internal/schema"
 	"dbseeder/internal/seeder/providers"
-	"fmt"
-	"github.com/sirupsen/logrus"
 )
 
 type DbProvider interface {

@@ -1,10 +1,11 @@
 package exporter
 
 import (
-	"dbseeder/internal/schema"
 	"fmt"
 	"io"
 	"strings"
+
+	"dbseeder/internal/schema"
 )
 
 // TableDependenceTreeExporter tree exporter

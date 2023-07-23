@@ -1,10 +1,12 @@
 package fake
 
 import (
-	"dbseeder/internal/schema"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+
+	"dbseeder/internal/schema"
 )
 
 func TestGenerateStr(t *testing.T) {

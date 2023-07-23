@@ -2,6 +2,12 @@ package internal
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"os"
+
+	"gopkg.in/yaml.v3"
+
 	"dbseeder/internal/exporter"
 	"dbseeder/internal/modifiers"
 	parser2 "dbseeder/internal/parser"
@@ -9,10 +15,6 @@ import (
 	"dbseeder/internal/seeder"
 	"dbseeder/internal/seeder/generators/fake"
 	"dbseeder/pkg/color"
-	"errors"
-	"fmt"
-	"gopkg.in/yaml.v3"
-	"os"
 )
 
 const (

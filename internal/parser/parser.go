@@ -1,12 +1,14 @@
 package parser
 
 import (
-	"dbseeder/internal/schema"
 	"errors"
 	"fmt"
+
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
+
+	"dbseeder/internal/schema"
 )
 
 type connectionPool struct {

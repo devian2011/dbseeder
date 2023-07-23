@@ -2,9 +2,11 @@ package parser
 
 import (
 	"database/sql"
-	"dbseeder/internal/schema"
 	"fmt"
+
 	"github.com/jmoiron/sqlx"
+
+	"dbseeder/internal/schema"
 )
 
 const (

@@ -1,9 +1,10 @@
 package list
 
 import (
-	"dbseeder/internal/schema"
 	"fmt"
 	"math/rand"
+
+	"dbseeder/internal/schema"
 )
 
 func Generate(fieldName string, fieldVal schema.Field) (any, error) {
