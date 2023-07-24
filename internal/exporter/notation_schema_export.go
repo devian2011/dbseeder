@@ -1,9 +1,11 @@
 package exporter
 
 import (
-	"dbseeder/internal/schema"
-	"gopkg.in/yaml.v3"
 	"io"
+
+	"gopkg.in/yaml.v3"
+
+	"dbseeder/internal/schema"
 )
 
 // ExportNotation export notation to writer

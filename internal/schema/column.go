@@ -1,8 +1,9 @@
 package schema
 
 import (
-	"dbseeder/pkg/helper"
 	"fmt"
+
+	"dbseeder/pkg/helper"
 )
 
 type columnSorter struct {

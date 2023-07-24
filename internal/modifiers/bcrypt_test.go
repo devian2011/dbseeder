@@ -1,9 +1,10 @@
 package modifiers
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/bcrypt"
-	"testing"
 )
 
 func TestBCryptModifier_GetFn(t *testing.T) {

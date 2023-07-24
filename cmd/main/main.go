@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
-	"dbseeder/internal"
 	"flag"
-	"github.com/sirupsen/logrus"
 	"os/signal"
 	"syscall"
+
+	"github.com/sirupsen/logrus"
+
+	"dbseeder/internal"
 )
 
 func main() {

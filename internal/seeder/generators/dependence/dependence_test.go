@@ -1,9 +1,11 @@
 package dependence
 
 import (
-	"dbseeder/internal/schema"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"dbseeder/internal/schema"
 )
 
 func TestGenerateExpression(t *testing.T) {

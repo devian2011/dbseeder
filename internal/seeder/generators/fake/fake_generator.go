@@ -1,13 +1,15 @@
 package fake
 
 import (
-	"dbseeder/internal/schema"
 	"fmt"
 	"math/rand"
 	"strconv"
 	"strings"
-	"syreclabs.com/go/faker"
 	"time"
+
+	"syreclabs.com/go/faker"
+
+	"dbseeder/internal/schema"
 )
 
 type FieldType string
