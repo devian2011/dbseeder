@@ -2,10 +2,15 @@ package schema
 
 import (
 	"fmt"
+	"strings"
 )
 
 func TableCode(dbName, tableName string) string {
 	return fmt.Sprintf("%s.%s", dbName, tableName)
+}
+
+func GetDbFromTableCode(code string) string {
+	return strings.Split(code, ".")[0]
 }
 
 type Schema struct {
