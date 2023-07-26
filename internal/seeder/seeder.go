@@ -52,26 +52,19 @@ func (seeder *Seeder) Run() error {
 	return err
 }
 
-func (seeder *Seeder) walkingFn(code string, node *schema.TableDependenceNode) error {
-	if seeder.relValues.IsTableDataGenerated(code) {
+func (seeder *Seeder) walkingFn(tbl *schema.Table, columnOrder []string, dbName, tblCode string) error {
+	if seeder.relValues.IsTableDataGenerated(tblCode) {
 		return nil
 	}
 	/// If table has dependencies - truncate it
-	if len(node.Dependencies) > 0 && node.Table.Action == schema.ActionGenerate {
-		truncateErr := seeder.db.truncate(node.DbName, node.Table.Name)
+	if tbl.Action == schema.ActionGenerate {
+		truncateErr := seeder.db.truncate(dbName, tbl.Name)
 		if truncateErr != nil {
 			return truncateErr
 		}
 	}
 
-	for _, dependency := range node.Dependencies {
-		err := seeder.walkingFn(dependency.Code, dependency)
-		if err != nil {
-			return err
-		}
-	}
-
-	switch node.Table.Action {
+	switch tbl.Action {
 	case schema.ActionGenerate:
 		td := seeder.generatorSPool.Get().(*tableGenerator)
 		defer func() {
@@ -79,7 +72,7 @@ func (seeder *Seeder) walkingFn(code string, node *schema.TableDependenceNode) e
 			seeder.generatorSPool.Put(td)
 		}()
 
-		tableDataErr := td.init(node)
+		tableDataErr := td.init(tblCode, columnOrder, tbl)
 		if tableDataErr != nil {
 			return tableDataErr
 		}
@@ -89,57 +82,53 @@ func (seeder *Seeder) walkingFn(code string, node *schema.TableDependenceNode) e
 			return tableGenErr
 		}
 
-		insertErr := seeder.db.insert(node.DbName, node.Table.Name, node.ColumnOrder, td.values)
+		insertErr := seeder.db.insert(dbName, tbl.Name, columnOrder, td.values)
 		if insertErr != nil {
 			return insertErr
 		}
 
-		if node.HasDependents() {
-			result, err := seeder.db.loadDataFromDb(node.DbName, node.Table.Name)
-			if err == nil {
-				seeder.relValues.Add(code, result)
-			}
-			return err
+		result, err := seeder.db.loadDataFromDb(dbName, tbl.Name)
+		if err == nil {
+			seeder.relValues.Add(tblCode, result)
 		}
-		return nil
+		return err
 
 	case schema.ActionGet:
-		if node.HasDependents() {
-			result, err := seeder.db.loadDataFromDb(node.DbName, node.Table.Name)
-			if err == nil {
-				seeder.relValues.Add(code, result)
-			}
-			return err
+		result, err := seeder.db.loadDataFromDb(dbName, tbl.Name)
+		if err == nil {
+			seeder.relValues.Add(tblCode, result)
 		}
-		return nil
+		return err
 	default:
-		return fmt.Errorf("unknown action for table: %s", code)
+		return fmt.Errorf("unknown action for table: %s", tblCode)
 	}
 }
 
 type tableGenerator struct {
 	rowsCount      int
+	columnOrder    []string
 	relationValues *RelationStore
-	node           *schema.TableDependenceNode
+	tbl            *schema.Table
 	plugins        *modifiers.ModifierStore
 	values         []any
 	rowsHashes     map[string]bool
 	relations      map[string]map[int]bool
 }
 
-func (generator *tableGenerator) init(node *schema.TableDependenceNode) error {
+func (generator *tableGenerator) init(tblCode string, columnOrder []string, tbl *schema.Table) error {
 	/// Found length for generated values
-	rowsCount := node.Table.GetRowsCount()
+	rowsCount := tbl.GetRowsCount()
 	if rowsCount == 0 {
 		return fmt.Errorf(
 			"count rows and fill part for table: %s is empty, set count generated rows or make fill data",
-			node.Code)
+			tblCode)
 	}
 
-	generator.node = node
+	generator.tbl = tbl
+	generator.columnOrder = columnOrder
 	generator.rowsCount = rowsCount
 
-	generator.values = make([]any, 0, rowsCount*len(node.Table.Fields))
+	generator.values = make([]any, 0, rowsCount*len(tbl.Fields))
 	generator.rowsHashes = make(map[string]bool, rowsCount)
 	generator.relations = make(map[string]map[int]bool, 0)
 
@@ -151,7 +140,7 @@ func (generator *tableGenerator) erase() {
 	generator.values = nil
 	generator.rowsHashes = nil
 	generator.relations = nil
-	generator.node = nil
+	generator.tbl = nil
 }
 
 func (generator *tableGenerator) generate() error {
@@ -164,7 +153,7 @@ func (generator *tableGenerator) generate() error {
 			}
 
 			// It table require no duplicates - check that this values has no identical rows
-			if generator.node.Table.NoDuplicates {
+			if generator.tbl.NoDuplicates {
 				sliceHash := helper.SliceHash(rowValues)
 				if _, exists = generator.rowsHashes[sliceHash]; !exists {
 					generator.values = append(generator.values, rowValues...)
@@ -183,12 +172,12 @@ func (generator *tableGenerator) generate() error {
 var ErrGetFromDb = errors.New("get field val from db")
 
 func (generator *tableGenerator) generateRow(rowNumber int) ([]any, error) {
-	rowValues := make(map[string]any, len(generator.node.ColumnOrder))
-	values := make([]any, 0, len(generator.node.ColumnOrder))
-	for _, fieldName := range generator.node.ColumnOrder {
-		if len(generator.node.Table.Fill) > rowNumber {
-			if v, exists := generator.node.Table.Fill[rowNumber][fieldName]; exists {
-				v, err := generator.plugins.ApplyList(generator.node.Table.Fields[fieldName].Plugins, v)
+	rowValues := make(map[string]any, len(generator.columnOrder))
+	values := make([]any, 0, len(generator.columnOrder))
+	for _, fieldName := range generator.columnOrder {
+		if len(generator.tbl.Fill) > rowNumber {
+			if v, exists := generator.tbl.Fill[rowNumber][fieldName]; exists {
+				v, err := generator.plugins.ApplyList(generator.tbl.Fields[fieldName].Plugins, v)
 				if err != nil {
 					return nil, err
 				}
@@ -216,7 +205,7 @@ func (generator *tableGenerator) generateRow(rowNumber int) ([]any, error) {
 }
 
 func (generator *tableGenerator) generateFieldValue(fieldName string, rowValues map[string]any) (any, error) {
-	fieldValue := generator.node.Table.Fields[fieldName]
+	fieldValue := generator.tbl.Fields[fieldName]
 	switch fieldValue.Generation {
 	case schema.GenerationTypeFaker:
 		vl, err := fake.Generate(fieldName, fieldValue)

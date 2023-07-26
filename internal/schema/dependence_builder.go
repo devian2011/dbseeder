@@ -1,12 +1,14 @@
 package schema
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type Tree struct {
 	nodes []*TreeNode
 }
 
-type TreeHandleFunc func(tbl *Table, columnOrder []string, dbName, dbCode string) error
+type TreeHandleFunc func(tbl *Table, columnOrder []string, dbName, tblCode string) error
 
 func (t *Tree) Walk(fn TreeHandleFunc) error {
 	appliedDict := make(map[string]interface{})
@@ -51,6 +53,17 @@ func (n *TreeNode) apply(applied map[string]interface{}, fn TreeHandleFunc) erro
 	}
 
 	applied[n.code] = nil
+
+	for _, prev := range n.previous {
+		if _, exists := applied[prev.code]; exists {
+			continue
+		}
+		if err := prev.apply(applied, fn); err != nil {
+			return err
+		}
+		applied[prev.code] = nil
+	}
+
 	for _, next := range n.next {
 		if _, exists := applied[next.code]; exists {
 			continue
