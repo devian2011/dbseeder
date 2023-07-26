@@ -52,9 +52,9 @@ func NewApplication(ctx context.Context, dbConfFilePath string) (*Application, e
 		modifiers:  modifiers.NewModifierStore(),
 	}
 
-	//if schemaCheckErr := app.schema.Check(); schemaCheckErr != nil {
-	//	return nil, schemaCheckErr
-	//}
+	if schemaCheckErr := app.schema.Check(); schemaCheckErr != nil {
+		return nil, schemaCheckErr
+	}
 
 	app.commandMap = map[string]func() error{
 		seedCommand:          app.seed,

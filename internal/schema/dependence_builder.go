@@ -5,7 +5,8 @@ import (
 )
 
 type Tree struct {
-	nodes []*TreeNode
+	nodes   []*TreeNode
+	nodeMap map[string]*TreeNode
 }
 
 type TreeHandleFunc func(tbl *Table, columnOrder []string, dbName, tblCode string) error
@@ -26,6 +27,10 @@ func (t *Tree) Walk(fn TreeHandleFunc) error {
 	}
 
 	return nil
+}
+
+func (t *Tree) GetNode(dbName, tableName string) *TreeNode {
+	return t.nodeMap[TableCode(dbName, tableName)]
 }
 
 type TreeNode struct {
@@ -119,18 +124,20 @@ func BuildTree(dbs *Databases) (*Tree, error) {
 		}
 	}
 
-	tree := &Tree{nodes: make([]*TreeNode, 0, len(tableMap))}
-	nodesMap := make(map[string]*TreeNode, len(tableMap))
+	tree := &Tree{
+		nodes:   make([]*TreeNode, 0, len(tableMap)),
+		nodeMap: make(map[string]*TreeNode, len(tableMap)),
+	}
 
 	for code := range tableMap {
-		if _, exists := nodesMap[code]; !exists {
-			if err := buildTableDependencies(code, tableMap, nodesMap); err != nil {
+		if _, exists := tree.nodeMap[code]; !exists {
+			if err := buildTableDependencies(code, tableMap, tree.nodeMap); err != nil {
 				return nil, err
 			}
 		}
 	}
 
-	for _, n := range nodesMap {
+	for _, n := range tree.nodeMap {
 		if len(n.previous) == 0 {
 			tree.nodes = append(tree.nodes, n)
 		}
