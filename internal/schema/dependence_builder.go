@@ -94,6 +94,14 @@ func buildTableDependencies(tCode string, tMap map[string]*Table, nMap map[strin
 		code:        tCode,
 	}
 	nMap[tCode] = tNode
+
+	var err error
+	srt := columnSorter{fields: table.Fields}
+	tNode.columnOrder, err = srt.sort()
+	if err != nil {
+		return err
+	}
+
 	for _, fld := range table.Fields {
 		if fld.IsFkDependence() {
 			dCode := TableCode(fld.Depends.ForeignKey.Db, fld.Depends.ForeignKey.Table)
