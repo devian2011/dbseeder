@@ -11,23 +11,20 @@ type Tree struct {
 	nodeMap map[string]*TreeNode
 }
 
-func (t *Tree) Iterate(fn func(t *Tree, c string, n *TreeNode)) {
+func (t *Tree) Iterate(fn func(t *Tree, c string, n *TreeNode) error) error {
 	for c, n := range t.nodeMap {
-		fn(t, c, n)
+		if err := fn(t, c, n); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
 type TreeHandleFunc func(node *TreeNode) error
 
 const (
-	nodeStartProcessing = iota
-	nodeApplyingPrevious
-	nodeAppliedPrevious
-	nodeAppliedBeforeNextFn
-	nodeApplyingNext
-	nodeAppliedNext
-	nodeAppliedAfterNextFn
-	nodeProcessed
+	nodeProcessed = iota
 )
 
 type executionMap struct {
@@ -51,12 +48,37 @@ func (e *executionMap) setState(code string, state int) {
 	e.status[code] = state
 }
 
-func (t *Tree) Walk(beforeFn TreeHandleFunc, afterFn TreeHandleFunc) error {
+type WalkHandlers struct {
+	BeforeProcessing TreeHandleFunc
+	Processing       TreeHandleFunc
+	AfterProcessing  TreeHandleFunc
+}
+
+func (t *Tree) WalkAsc(handler TreeHandleFunc) error {
 	m := &executionMap{
 		status: make(map[string]int, len(t.nodeMap)),
 	}
 	for _, n := range t.nodes {
-		if err := n.apply(m, beforeFn, afterFn); err != nil {
+		if m.handling(n.Code) {
+			continue
+		}
+		if err := n.applyAsc(m, handler); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (t *Tree) WalkDesc(handler TreeHandleFunc) error {
+	m := &executionMap{
+		status: make(map[string]int, len(t.nodeMap)),
+	}
+	for _, n := range t.nodes {
+		if m.handling(n.Code) {
+			continue
+		}
+		if err := n.applyDesc(m, handler); err != nil {
 			return err
 		}
 	}
@@ -80,6 +102,25 @@ type TreeNode struct {
 	ColumnOrder []string
 }
 
+func (n *TreeNode) applyForPrevious(handleFunc TreeHandleFunc) error {
+	for _, prev := range n.previous {
+		if err := prev.applyForPrevious(handleFunc); err != nil {
+			return err
+		}
+	}
+	return handleFunc(n)
+}
+
+func (n *TreeNode) applyForNext(handleFunc TreeHandleFunc) error {
+	for _, next := range n.next {
+		if err := next.applyForNext(handleFunc); err != nil {
+			return err
+		}
+	}
+
+	return handleFunc(n)
+}
+
 func (n *TreeNode) HasDependencies() bool {
 	return len(n.next) > 0
 }
@@ -88,54 +129,53 @@ func (n *TreeNode) HasDependents() bool {
 	return len(n.previous) > 0
 }
 
-func (n *TreeNode) apply(m *executionMap, beforeFn TreeHandleFunc, afterFn TreeHandleFunc) error {
-	if m.inState(n.Code, nodeProcessed) {
-		return nil
-	}
+func (n *TreeNode) applyAsc(m *executionMap, handler TreeHandleFunc) error {
+	m.setState(n.Code, nodeProcessed)
 
-	if !m.handling(n.Code) {
-		m.setState(n.Code, nodeStartProcessing)
-	}
-
-	if m.inState(n.Code, nodeStartProcessing) && !m.inState(n.Code, nodeApplyingPrevious) {
-		m.setState(n.Code, nodeApplyingPrevious)
-		for _, prev := range n.previous {
-			if m.handling(prev.Code) {
-				continue
-			}
-			if err := prev.apply(m, beforeFn, afterFn); err != nil {
-				return err
-			}
+	wrapper := func(node *TreeNode) error {
+		if m.handling(node.Code) {
+			return nil
 		}
-		m.setState(n.Code, nodeAppliedPrevious)
+		m.setState(node.Code, nodeProcessed)
+		return node.applyAsc(m, handler)
 	}
 
-	if m.inState(n.Code, nodeAppliedPrevious) && !m.inState(n.Code, nodeAppliedBeforeNextFn) {
-		if bErr := beforeFn(n); bErr != nil {
-			return bErr
+	if previousProcessingErr := n.applyForPrevious(wrapper); previousProcessingErr != nil {
+		return previousProcessingErr
+	}
+
+	if errProcessing := handler(n); errProcessing != nil {
+		return errProcessing
+	}
+
+	if nextProcessing := n.applyForNext(wrapper); nextProcessing != nil {
+		return nextProcessing
+	}
+
+	return nil
+}
+
+func (n *TreeNode) applyDesc(m *executionMap, handler TreeHandleFunc) error {
+	m.setState(n.Code, nodeProcessed)
+
+	wrapper := func(node *TreeNode) error {
+		if m.handling(node.Code) {
+			return nil
 		}
-		m.setState(n.Code, nodeAppliedBeforeNextFn)
+		m.setState(node.Code, nodeProcessed)
+		return node.applyDesc(m, handler)
 	}
 
-	if m.inState(n.Code, nodeAppliedBeforeNextFn) && !m.inState(n.Code, nodeApplyingNext) {
-		m.setState(n.Code, nodeApplyingNext)
-		for _, next := range n.next {
-			if err := next.apply(m, beforeFn, afterFn); err != nil {
-				return err
-			}
-		}
-		m.setState(n.Code, nodeAppliedNext)
+	if nextProcessing := n.applyForNext(wrapper); nextProcessing != nil {
+		return nextProcessing
 	}
 
-	if m.inState(n.Code, nodeAppliedNext) && !m.inState(n.Code, nodeAppliedAfterNextFn) {
-		if aErr := afterFn(n); aErr != nil {
-			return aErr
-		}
-		m.setState(n.Code, nodeAppliedAfterNextFn)
+	if errProcessing := handler(n); errProcessing != nil {
+		return errProcessing
 	}
 
-	if m.inState(n.Code, nodeAppliedAfterNextFn) {
-		m.setState(n.Code, nodeProcessed)
+	if previousProcessingErr := n.applyForPrevious(wrapper); previousProcessingErr != nil {
+		return previousProcessingErr
 	}
 
 	return nil

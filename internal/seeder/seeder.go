@@ -41,7 +41,16 @@ func NewSeeder(sch *schema.Schema, plugins *modifiers.ModifierStore) (*Seeder, e
 }
 
 func (seeder *Seeder) Run() error {
-	err := seeder.schema.Tree.Walk(seeder.truncateTableFn, seeder.valueGenerationFn)
+	// Truncate tables
+	err := seeder.schema.Tree.WalkAsc(seeder.truncateTableFn)
+
+	if err != nil {
+		seeder.db.pool.rollback()
+		return err
+	}
+
+	// Fill data to tables
+	err = seeder.schema.Tree.WalkDesc(seeder.valueGenerationFn)
 
 	if err != nil {
 		seeder.db.pool.rollback()
