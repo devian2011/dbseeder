@@ -21,6 +21,7 @@ const (
 	seedCommand          = "seed"
 	parseCommand         = "parse"
 	modifiersList        = "modifiers"
+	explainCommand       = "explain"
 	exportSchema         = "export-schema"
 	schemaDependencies   = "schema-dependencies"
 	fieldTypeDefinitions = "fields"
@@ -52,9 +53,9 @@ func NewApplication(ctx context.Context, dbConfFilePath string) (*Application, e
 		modifiers:  modifiers.NewModifierStore(),
 	}
 
-	if schemaCheckErr := app.schema.Check(); schemaCheckErr != nil {
-		return nil, schemaCheckErr
-	}
+	//if schemaCheckErr := app.schema.Check(); schemaCheckErr != nil {
+	//	return nil, schemaCheckErr
+	//}
 
 	app.commandMap = map[string]func() error{
 		seedCommand:          app.seed,
@@ -62,6 +63,7 @@ func NewApplication(ctx context.Context, dbConfFilePath string) (*Application, e
 		modifiersList:        app.modifierList,
 		fieldTypeDefinitions: app.fieldTypesDefinitions,
 		helpCommand:          app.help,
+		explainCommand:       app.explain,
 	}
 
 	return app, nil
@@ -109,6 +111,10 @@ func (a *Application) seed() error {
 	}
 
 	return sdr.Run()
+}
+
+func (a *Application) explain() error {
+	return a.schema.Explain()
 }
 
 func (a *Application) parse() error {

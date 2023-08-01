@@ -4,24 +4,59 @@ import (
 	"fmt"
 )
 
+//TODO: Refactor tree walk functions. Change before and after functions
+
 type Tree struct {
 	nodes   []*TreeNode
 	nodeMap map[string]*TreeNode
 }
 
+func (t *Tree) Iterate(fn func(t *Tree, c string, n *TreeNode)) {
+	for c, n := range t.nodeMap {
+		fn(t, c, n)
+	}
+}
+
 type TreeHandleFunc func(tbl *Table, columnOrder []string, dbName, tblCode string) error
 
-func (t *Tree) Walk(fn TreeHandleFunc) error {
-	appliedDict := make(map[string]interface{})
+const (
+	nodeStartProcessing = iota
+	nodeApplyingPrevious
+	nodeAppliedPrevious
+	nodeAppliedBeforeNextFn
+	nodeApplyingNext
+	nodeAppliedNext
+	nodeAppliedAfterNextFn
+	nodeProcessed
+)
+
+type executionMap struct {
+	status map[string]int
+}
+
+func (e *executionMap) handling(code string) bool {
+	_, exists := e.status[code]
+	return exists
+}
+
+func (e *executionMap) inState(code string, state int) bool {
+	if st, exists := e.status[code]; exists {
+		return st >= state
+	}
+
+	return false
+}
+
+func (e *executionMap) setState(code string, state int) {
+	e.status[code] = state
+}
+
+func (t *Tree) Walk(beforeFn TreeHandleFunc, afterFn TreeHandleFunc) error {
+	m := &executionMap{
+		status: make(map[string]int, len(t.nodeMap)),
+	}
 	for _, n := range t.nodes {
-		if _, exists := appliedDict[n.code]; exists {
-			continue
-		}
-		if err := fn(n.table, n.columnOrder, n.dbName, n.code); err != nil {
-			return err
-		}
-		appliedDict[n.code] = nil
-		if err := n.apply(appliedDict, fn); err != nil {
+		if err := n.apply(m, beforeFn, afterFn); err != nil {
 			return err
 		}
 	}
@@ -34,12 +69,15 @@ func (t *Tree) GetNode(dbName, tableName string) *TreeNode {
 }
 
 type TreeNode struct {
-	next        []*TreeNode
-	previous    []*TreeNode
-	table       *Table
+	table *Table
+
+	dbName string
+	code   string
+
+	next     []*TreeNode
+	previous []*TreeNode
+
 	columnOrder []string
-	dbName      string
-	code        string
 }
 
 func (n *TreeNode) HasDependencies() bool {
@@ -50,34 +88,54 @@ func (n *TreeNode) HasDependents() bool {
 	return len(n.previous) > 0
 }
 
-func (n *TreeNode) apply(applied map[string]interface{}, fn TreeHandleFunc) error {
-	if _, exists := applied[n.code]; !exists {
-		if err := fn(n.table, n.columnOrder, n.dbName, n.code); err != nil {
-			return err
-		}
+func (n *TreeNode) apply(m *executionMap, beforeFn TreeHandleFunc, afterFn TreeHandleFunc) error {
+	if m.inState(n.code, nodeProcessed) {
+		return nil
 	}
 
-	applied[n.code] = nil
-
-	for _, prev := range n.previous {
-		if _, exists := applied[prev.code]; exists {
-			continue
-		}
-		if err := prev.apply(applied, fn); err != nil {
-			return err
-		}
-		applied[prev.code] = nil
+	if !m.handling(n.code) {
+		m.setState(n.code, nodeStartProcessing)
 	}
 
-	for _, next := range n.next {
-		if _, exists := applied[next.code]; exists {
-			continue
+	if m.inState(n.code, nodeStartProcessing) && !m.inState(n.code, nodeApplyingPrevious) {
+		m.setState(n.code, nodeApplyingPrevious)
+		for _, prev := range n.previous {
+			if m.handling(prev.code) {
+				continue
+			}
+			if err := prev.apply(m, beforeFn, afterFn); err != nil {
+				return err
+			}
 		}
+		m.setState(n.code, nodeAppliedPrevious)
+	}
 
-		if err := next.apply(applied, fn); err != nil {
-			return err
+	if m.inState(n.code, nodeAppliedPrevious) && !m.inState(n.code, nodeAppliedBeforeNextFn) {
+		if bErr := beforeFn(n.table, n.columnOrder, n.dbName, n.code); bErr != nil {
+			return bErr
 		}
-		applied[next.code] = nil
+		m.setState(n.code, nodeAppliedBeforeNextFn)
+	}
+
+	if m.inState(n.code, nodeAppliedBeforeNextFn) && !m.inState(n.code, nodeApplyingNext) {
+		m.setState(n.code, nodeApplyingNext)
+		for _, next := range n.next {
+			if err := next.apply(m, beforeFn, afterFn); err != nil {
+				return err
+			}
+		}
+		m.setState(n.code, nodeAppliedNext)
+	}
+
+	if m.inState(n.code, nodeAppliedNext) && !m.inState(n.code, nodeAppliedAfterNextFn) {
+		if aErr := afterFn(n.table, n.columnOrder, n.dbName, n.code); aErr != nil {
+			return aErr
+		}
+		m.setState(n.code, nodeAppliedAfterNextFn)
+	}
+
+	if m.inState(n.code, nodeAppliedAfterNextFn) {
+		m.setState(n.code, nodeProcessed)
 	}
 
 	return nil

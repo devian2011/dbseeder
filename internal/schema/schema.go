@@ -32,27 +32,41 @@ func NewSchema(dbs *Databases) (*Schema, error) {
 	return sh, nil
 }
 
+func (schema Schema) Explain() error {
+	return schema.Tree.Walk(func(tbl *Table, columnOrder []string, dbName, tblCode string) error {
+		fmt.Printf("truncate %s \n", tblCode)
+		return nil
+	}, func(tbl *Table, columnOrder []string, dbName, tblCode string) error {
+		fmt.Printf("generate %s\n", tblCode)
+		return nil
+	})
+}
+
 func (schema Schema) Check() error {
-	return schema.Tree.Walk(func(tbl *Table, columnOrder []string, dbName, dbCode string) error {
-		for fieldName, field := range tbl.Fields {
-			if field.IsFkDependence() && field.Depends.ForeignKey.Type == OneToOne {
-				depNode := schema.Tree.GetNode(field.Depends.ForeignKey.Db, field.Depends.ForeignKey.Table)
-				if tbl.GetRowsCount() != depNode.table.GetRowsCount() {
-					return fmt.Errorf("in fk oneToOne relation count of rows MUST be equal (%s.%s.%s - %s.%s.%s)",
-						depNode.dbName, depNode.table.Name, field.Depends.ForeignKey.Field,
-						dbName, tbl.Name, fieldName)
+	return schema.Tree.Walk(
+		func(tbl *Table, columnOrder []string, dbName, dbCode string) error {
+			for fieldName, field := range tbl.Fields {
+				if field.IsFkDependence() && field.Depends.ForeignKey.Type == OneToOne {
+					depNode := schema.Tree.GetNode(field.Depends.ForeignKey.Db, field.Depends.ForeignKey.Table)
+					if tbl.GetRowsCount() != depNode.table.GetRowsCount() {
+						return fmt.Errorf("in fk oneToOne relation count of rows MUST be equal (%s.%s.%s - %s.%s.%s)",
+							depNode.dbName, depNode.table.Name, field.Depends.ForeignKey.Field,
+							dbName, tbl.Name, fieldName)
+					}
 				}
-			}
-			if field.IsExpressionDependence() {
-				for _, r := range field.Depends.Expression.Rows {
-					if tbl.Fields[r].Generation == GenerationTypeDb {
-						return fmt.Errorf("row with expression cannot use db generated values %s.%s.%s - %s))",
-							dbName, tbl.Name, fieldName, r)
+				if field.IsExpressionDependence() {
+					for _, r := range field.Depends.Expression.Rows {
+						if tbl.Fields[r].Generation == GenerationTypeDb {
+							return fmt.Errorf("row with expression cannot use db generated values %s.%s.%s - %s))",
+								dbName, tbl.Name, fieldName, r)
+						}
 					}
 				}
 			}
-		}
 
-		return nil
-	})
+			return nil
+		},
+		func(tbl *Table, columnOrder []string, dbName, dbCode string) error {
+			return nil
+		})
 }

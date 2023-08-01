@@ -41,7 +41,7 @@ func NewSeeder(sch *schema.Schema, plugins *modifiers.ModifierStore) (*Seeder, e
 }
 
 func (seeder *Seeder) Run() error {
-	err := seeder.schema.Tree.Walk(seeder.walkingFn)
+	err := seeder.schema.Tree.Walk(seeder.truncateTableFn, seeder.valueGenerationFn)
 
 	if err != nil {
 		seeder.db.pool.rollback()
@@ -52,7 +52,7 @@ func (seeder *Seeder) Run() error {
 	return err
 }
 
-func (seeder *Seeder) walkingFn(tbl *schema.Table, columnOrder []string, dbName, tblCode string) error {
+func (seeder *Seeder) truncateTableFn(tbl *schema.Table, columnOrder []string, dbName, tblCode string) error {
 	if seeder.relValues.IsTableDataGenerated(tblCode) {
 		return nil
 	}
@@ -64,6 +64,10 @@ func (seeder *Seeder) walkingFn(tbl *schema.Table, columnOrder []string, dbName,
 		}
 	}
 
+	return nil
+}
+
+func (seeder *Seeder) valueGenerationFn(tbl *schema.Table, columnOrder []string, dbName, tblCode string) error {
 	switch tbl.Action {
 	case schema.ActionGenerate:
 		td := seeder.generatorSPool.Get().(*tableGenerator)

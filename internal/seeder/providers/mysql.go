@@ -52,7 +52,7 @@ func (m *MysqlProvider) GetAll(tableName string) ([]map[string]any, error) {
 }
 
 func (m *MysqlProvider) Truncate(tableName string) error {
-	return m.tx.QueryRowx("TRUNCATE TABLE " + tableName).Err()
+	return m.tx.QueryRowx("DELETE FROM TABLE " + tableName).Err()
 }
 
 func (m *MysqlProvider) Insert(tableName string, columns []string, values []any) error {
