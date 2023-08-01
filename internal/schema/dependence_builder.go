@@ -17,7 +17,7 @@ func (t *Tree) Iterate(fn func(t *Tree, c string, n *TreeNode)) {
 	}
 }
 
-type TreeHandleFunc func(tbl *Table, columnOrder []string, dbName, tblCode string) error
+type TreeHandleFunc func(node *TreeNode) error
 
 const (
 	nodeStartProcessing = iota
@@ -69,15 +69,15 @@ func (t *Tree) GetNode(dbName, tableName string) *TreeNode {
 }
 
 type TreeNode struct {
-	table *Table
+	Table *Table
 
-	dbName string
-	code   string
+	DbName string
+	Code   string
 
 	next     []*TreeNode
 	previous []*TreeNode
 
-	columnOrder []string
+	ColumnOrder []string
 }
 
 func (n *TreeNode) HasDependencies() bool {
@@ -89,53 +89,53 @@ func (n *TreeNode) HasDependents() bool {
 }
 
 func (n *TreeNode) apply(m *executionMap, beforeFn TreeHandleFunc, afterFn TreeHandleFunc) error {
-	if m.inState(n.code, nodeProcessed) {
+	if m.inState(n.Code, nodeProcessed) {
 		return nil
 	}
 
-	if !m.handling(n.code) {
-		m.setState(n.code, nodeStartProcessing)
+	if !m.handling(n.Code) {
+		m.setState(n.Code, nodeStartProcessing)
 	}
 
-	if m.inState(n.code, nodeStartProcessing) && !m.inState(n.code, nodeApplyingPrevious) {
-		m.setState(n.code, nodeApplyingPrevious)
+	if m.inState(n.Code, nodeStartProcessing) && !m.inState(n.Code, nodeApplyingPrevious) {
+		m.setState(n.Code, nodeApplyingPrevious)
 		for _, prev := range n.previous {
-			if m.handling(prev.code) {
+			if m.handling(prev.Code) {
 				continue
 			}
 			if err := prev.apply(m, beforeFn, afterFn); err != nil {
 				return err
 			}
 		}
-		m.setState(n.code, nodeAppliedPrevious)
+		m.setState(n.Code, nodeAppliedPrevious)
 	}
 
-	if m.inState(n.code, nodeAppliedPrevious) && !m.inState(n.code, nodeAppliedBeforeNextFn) {
-		if bErr := beforeFn(n.table, n.columnOrder, n.dbName, n.code); bErr != nil {
+	if m.inState(n.Code, nodeAppliedPrevious) && !m.inState(n.Code, nodeAppliedBeforeNextFn) {
+		if bErr := beforeFn(n); bErr != nil {
 			return bErr
 		}
-		m.setState(n.code, nodeAppliedBeforeNextFn)
+		m.setState(n.Code, nodeAppliedBeforeNextFn)
 	}
 
-	if m.inState(n.code, nodeAppliedBeforeNextFn) && !m.inState(n.code, nodeApplyingNext) {
-		m.setState(n.code, nodeApplyingNext)
+	if m.inState(n.Code, nodeAppliedBeforeNextFn) && !m.inState(n.Code, nodeApplyingNext) {
+		m.setState(n.Code, nodeApplyingNext)
 		for _, next := range n.next {
 			if err := next.apply(m, beforeFn, afterFn); err != nil {
 				return err
 			}
 		}
-		m.setState(n.code, nodeAppliedNext)
+		m.setState(n.Code, nodeAppliedNext)
 	}
 
-	if m.inState(n.code, nodeAppliedNext) && !m.inState(n.code, nodeAppliedAfterNextFn) {
-		if aErr := afterFn(n.table, n.columnOrder, n.dbName, n.code); aErr != nil {
+	if m.inState(n.Code, nodeAppliedNext) && !m.inState(n.Code, nodeAppliedAfterNextFn) {
+		if aErr := afterFn(n); aErr != nil {
 			return aErr
 		}
-		m.setState(n.code, nodeAppliedAfterNextFn)
+		m.setState(n.Code, nodeAppliedAfterNextFn)
 	}
 
-	if m.inState(n.code, nodeAppliedAfterNextFn) {
-		m.setState(n.code, nodeProcessed)
+	if m.inState(n.Code, nodeAppliedAfterNextFn) {
+		m.setState(n.Code, nodeProcessed)
 	}
 
 	return nil
@@ -146,16 +146,16 @@ func buildTableDependencies(tCode string, tMap map[string]*Table, nMap map[strin
 	tNode := &TreeNode{
 		next:        make([]*TreeNode, 0),
 		previous:    make([]*TreeNode, 0),
-		table:       table,
-		columnOrder: make([]string, len(table.Fields)),
-		dbName:      GetDbFromTableCode(tCode),
-		code:        tCode,
+		Table:       table,
+		ColumnOrder: make([]string, len(table.Fields)),
+		DbName:      GetDbFromTableCode(tCode),
+		Code:        tCode,
 	}
 	nMap[tCode] = tNode
 
 	var err error
 	srt := columnSorter{fields: table.Fields}
-	tNode.columnOrder, err = srt.sort()
+	tNode.ColumnOrder, err = srt.sort()
 	if err != nil {
 		return err
 	}

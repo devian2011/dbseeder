@@ -52,13 +52,13 @@ func (seeder *Seeder) Run() error {
 	return err
 }
 
-func (seeder *Seeder) truncateTableFn(tbl *schema.Table, columnOrder []string, dbName, tblCode string) error {
-	if seeder.relValues.IsTableDataGenerated(tblCode) {
+func (seeder *Seeder) truncateTableFn(node *schema.TreeNode) error {
+	if seeder.relValues.IsTableDataGenerated(node.Code) {
 		return nil
 	}
 	/// If table has dependencies - truncate it
-	if tbl.Action == schema.ActionGenerate {
-		truncateErr := seeder.db.truncate(dbName, tbl.Name)
+	if node.Table.Action == schema.ActionGenerate {
+		truncateErr := seeder.db.truncate(node.DbName, node.Table.Name)
 		if truncateErr != nil {
 			return truncateErr
 		}
@@ -67,8 +67,8 @@ func (seeder *Seeder) truncateTableFn(tbl *schema.Table, columnOrder []string, d
 	return nil
 }
 
-func (seeder *Seeder) valueGenerationFn(tbl *schema.Table, columnOrder []string, dbName, tblCode string) error {
-	switch tbl.Action {
+func (seeder *Seeder) valueGenerationFn(node *schema.TreeNode) error {
+	switch node.Table.Action {
 	case schema.ActionGenerate:
 		td := seeder.generatorSPool.Get().(*tableGenerator)
 		defer func() {
@@ -76,7 +76,7 @@ func (seeder *Seeder) valueGenerationFn(tbl *schema.Table, columnOrder []string,
 			seeder.generatorSPool.Put(td)
 		}()
 
-		tableDataErr := td.init(tblCode, columnOrder, tbl)
+		tableDataErr := td.init(node.Code, node.ColumnOrder, node.Table)
 		if tableDataErr != nil {
 			return tableDataErr
 		}
@@ -86,25 +86,25 @@ func (seeder *Seeder) valueGenerationFn(tbl *schema.Table, columnOrder []string,
 			return tableGenErr
 		}
 
-		insertErr := seeder.db.insert(dbName, tbl.Name, columnOrder, td.values)
+		insertErr := seeder.db.insert(node.DbName, node.Table.Name, node.ColumnOrder, td.values)
 		if insertErr != nil {
 			return insertErr
 		}
 
-		result, err := seeder.db.loadDataFromDb(dbName, tbl.Name)
+		result, err := seeder.db.loadDataFromDb(node.DbName, node.Table.Name)
 		if err == nil {
-			seeder.relValues.Add(tblCode, result)
+			seeder.relValues.Add(node.Code, result)
 		}
 		return err
 
 	case schema.ActionGet:
-		result, err := seeder.db.loadDataFromDb(dbName, tbl.Name)
+		result, err := seeder.db.loadDataFromDb(node.DbName, node.Table.Name)
 		if err == nil {
-			seeder.relValues.Add(tblCode, result)
+			seeder.relValues.Add(node.Code, result)
 		}
 		return err
 	default:
-		return fmt.Errorf("unknown action for table: %s", tblCode)
+		return fmt.Errorf("unknown action for table: %s", node.Code)
 	}
 }
 
