@@ -220,6 +220,8 @@ func (generator *tableGenerator) generateRow(rowNumber int) ([]any, error) {
 func (generator *tableGenerator) generateFieldValue(fieldName string, rowValues map[string]any) (any, error) {
 	fieldValue := generator.tbl.Fields[fieldName]
 	switch fieldValue.Generation {
+	case schema.GenerationTypeConst:
+		return fieldValue.ConstValue, nil
 	case schema.GenerationTypeFaker:
 		vl, err := fake.Generate(fieldName, fieldValue)
 		if err != nil {

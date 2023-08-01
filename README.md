@@ -10,7 +10,8 @@ parse - Get and write tables for databases.
 fields - Show all allowed fields                                             
 schema-dependencies - Show all dependecies btw tables and databases in schema
 modifiers - Show all allowed modifiers                                       
-export-schema - Show all schema files in one                                 
+export-schema - Show all schema files in one 
+explain - Show execution plan (order of generation and truncate tables)                                
 help - Show all commands  
 ```
 
@@ -132,7 +133,8 @@ databases: # Main section. It contains list of databases which we need to seed
             - firstname
     password:
       type: string
-      generation: faker
+      generation: const # Constant value. Will be identical for each row
+      constValue: 123
       plugins:
         - bcrypt
     last_online:

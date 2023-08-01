@@ -47,7 +47,8 @@
             - firstname
     password:
       type: string
-      generation: faker
+      generation: const
+      constValue: "123"
       plugins:
         - bcrypt
     last_online:
