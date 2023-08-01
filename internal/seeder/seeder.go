@@ -221,7 +221,7 @@ func (generator *tableGenerator) generateFieldValue(fieldName string, rowValues 
 	fieldValue := generator.tbl.Fields[fieldName]
 	switch fieldValue.Generation {
 	case schema.GenerationTypeConst:
-		return fieldValue.ConstValue, nil
+		return generator.plugins.ApplyList(fieldValue.Plugins, fieldValue.ConstValue)
 	case schema.GenerationTypeFaker:
 		vl, err := fake.Generate(fieldName, fieldValue)
 		if err != nil {
