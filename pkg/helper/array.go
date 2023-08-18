@@ -1,9 +1,7 @@
 package helper
 
 import (
-	"crypto/sha256"
-	"fmt"
-	"strings"
+	gbe "github.com/devian2011/go_basic_extension"
 )
 
 func InArray[T comparable](in []T, needle T) bool {
@@ -17,10 +15,5 @@ func InArray[T comparable](in []T, needle T) bool {
 }
 
 func SliceHash(sl []any) string {
-	b := strings.Builder{}
-	for _, v := range sl {
-		b.WriteString(fmt.Sprintf("%v", v))
-	}
-
-	return string(sha256.New().Sum([]byte(b.String())))
+	return gbe.HashSlice(sl)
 }
