@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/antonmedv/expr v1.12.2
-	github.com/devian2011/go_basic_extension v0.3.0
+	github.com/devian2011/go_basic_extension v0.3.1
 	github.com/go-sql-driver/mysql v1.7.0
 	github.com/jackc/pgx/v5 v5.3.1
 	github.com/jmoiron/sqlx v1.3.5

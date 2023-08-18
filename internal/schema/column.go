@@ -3,7 +3,7 @@ package schema
 import (
 	"fmt"
 
-	"dbseeder/pkg/helper"
+	gbe "github.com/devian2011/go_basic_extension"
 )
 
 type columnSorter struct {
@@ -38,7 +38,8 @@ func (o *columnSorter) depChainSort(sorted *[]string, fieldName string) error {
 				}
 			}
 		}
-		if !helper.InArray(*sorted, fieldName) {
+		g := gbe.Array[string](*sorted)
+		if g.NotContains(fieldName) {
 			*sorted = append(*sorted, fieldName)
 		}
 

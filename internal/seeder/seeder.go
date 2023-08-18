@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"sync"
 
+	gbe "github.com/devian2011/go_basic_extension"
+
 	"dbseeder/internal/modifiers"
 	"dbseeder/internal/schema"
 	"dbseeder/internal/seeder/generators/dependence"
 	"dbseeder/internal/seeder/generators/fake"
 	"dbseeder/internal/seeder/generators/list"
-	"dbseeder/pkg/helper"
 )
 
 type Seeder struct {
@@ -167,7 +168,7 @@ func (generator *tableGenerator) generate() error {
 
 			// It table require no duplicates - check that this values has no identical rows
 			if generator.tbl.NoDuplicates {
-				sliceHash := helper.SliceHash(rowValues)
+				sliceHash := gbe.HashSlice(rowValues)
 				if _, exists = generator.rowsHashes[sliceHash]; !exists {
 					generator.values = append(generator.values, rowValues...)
 					generator.rowsHashes[sliceHash] = true
