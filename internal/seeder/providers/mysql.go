@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 )
@@ -52,7 +53,11 @@ func (m *MysqlProvider) GetAll(tableName string) ([]map[string]any, error) {
 }
 
 func (m *MysqlProvider) Truncate(tableName string) error {
-	return m.tx.QueryRowx("DELETE FROM TABLE " + tableName).Err()
+	return m.tx.QueryRowx(
+		fmt.Sprintf(
+			"SET FOREIGN_KEY_CHECKS = 0; TRUNCATE %s; SET FOREIGN_KEY_CHECKS = 1;",
+			tableName,
+		)).Err()
 }
 
 func (m *MysqlProvider) Insert(tableName string, columns []string, values []any) error {
